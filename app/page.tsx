@@ -2,197 +2,253 @@
 
 import { useState } from "react"
 import { DashboardHeader } from "@/components/dashboard/header"
-import { CategorySidebar } from "@/components/dashboard/category-sidebar"
-import { ServiceAreaMap } from "@/components/dashboard/service-area-map"
-import { ProspectFeed } from "@/components/dashboard/prospect-feed"
-import { CRMTable, type TableLead } from "@/components/dashboard/crm-table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LayoutGrid, Table2, Menu, X } from "lucide-react"
+import { LeadCard } from "@/components/dashboard/lead-card"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Search,
+  Loader2,
+  Globe,
+  XCircle,
+  LayoutGrid,
+  Table2,
+  MapPin,
+  Building2,
+} from "lucide-react"
+import type { Business } from "@/app/api/search/route"
 
-const mockTableLeads: TableLead[] = [
-  {
-    id: "1",
-    businessName: "Mike's Auto Repair",
-    category: "Auto Services",
-    phone: "(555) 123-4567",
-    website: "http://mikesauto.com",
-    healthScore: 23,
-    tags: ["non-mobile-responsive", "slow-load-time", "no-ssl"],
-    seoTitle: "Mike's Auto Repair - Car Service",
-    seoDescription: "Your trusted local mechanic since 1985",
-    pageSpeed: 34,
-    mobileScore: 21,
-  },
-  {
-    id: "2",
-    businessName: "The Golden Spoon Restaurant",
-    category: "Restaurants & Cafes",
-    phone: "(555) 234-5678",
-    healthScore: 15,
-    tags: ["no-website", "facebook-only"],
-  },
-  {
-    id: "3",
-    businessName: "Bella's Hair Studio",
-    category: "Hair & Beauty Salons",
-    phone: "(555) 345-6789",
-    website: "http://bellashair.net",
-    healthScore: 42,
-    tags: ["non-mobile-responsive", "outdated-design"],
-    seoTitle: "Bella's Hair Studio",
-    pageSpeed: 45,
-    mobileScore: 38,
-  },
-  {
-    id: "4",
-    businessName: "Johnson Plumbing Co.",
-    category: "Contractors & Trades",
-    phone: "(555) 456-7890",
-    healthScore: 8,
-    tags: ["no-website"],
-  },
-  {
-    id: "5",
-    businessName: "Sunrise Dental Clinic",
-    category: "Healthcare & Medical",
-    phone: "(555) 567-8901",
-    website: "http://sunrisedental.org",
-    healthScore: 56,
-    tags: ["slow-load-time", "outdated-design"],
-    seoTitle: "Sunrise Dental - Family Dentistry",
-    seoDescription: "Comprehensive dental care for the whole family",
-    pageSpeed: 52,
-    mobileScore: 61,
-  },
-  {
-    id: "6",
-    businessName: "Paws & Claws Pet Grooming",
-    category: "Pet Services",
-    phone: "(555) 678-9012",
-    healthScore: 31,
-    tags: ["facebook-only", "non-mobile-responsive"],
-    seoTitle: "Paws & Claws Grooming",
-    pageSpeed: 28,
-    mobileScore: 19,
-  },
-  {
-    id: "7",
-    businessName: "Downtown Fitness Center",
-    category: "Fitness & Gyms",
-    phone: "(555) 789-0123",
-    website: "http://downtownfitness.com",
-    healthScore: 67,
-    tags: ["slow-load-time"],
-    seoTitle: "Downtown Fitness - Your Health Matters",
-    seoDescription: "State-of-the-art gym with personal trainers",
-    pageSpeed: 48,
-    mobileScore: 72,
-  },
-  {
-    id: "8",
-    businessName: "Creative Cuts Barbershop",
-    category: "Hair & Beauty Salons",
-    phone: "(555) 890-1234",
-    healthScore: 19,
-    tags: ["no-website", "facebook-only"],
-  },
+const CATEGORIES = [
+  "Restaurants & Cafes",
+  "Hair & Beauty Salons",
+  "Contractors & Trades",
+  "Plumbers",
+  "Electricians",
+  "HVAC",
+  "Roofing",
+  "Real Estate Agents",
+  "Auto Services",
+  "Healthcare & Medical",
+  "Dentists",
+  "Chiropractors",
+  "Retail Stores",
+  "Home Services",
+  "Landscaping",
+  "Fitness & Gyms",
+  "Pet Services",
+  "Photography",
+  "Accounting & Tax",
+  "Law Firms",
+  "Insurance Agents",
+  "Cleaning Services",
 ]
 
+type FilterType = "all" | "website" | "no-website"
+
 export default function Dashboard() {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [location, setLocation] = useState("")
+  const [category, setCategory] = useState("")
+  const [businesses, setBusinesses] = useState<Business[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [hasSearched, setHasSearched] = useState(false)
+  const [filter, setFilter] = useState<FilterType>("all")
+  const [stats, setStats] = useState({ total: 0, withWebsite: 0, withoutWebsite: 0 })
 
-  const handleGeneratePitch = (lead: TableLead) => {
-    console.log("Generating pitch for:", lead.businessName)
+  const handleSearch = async () => {
+    if (!location.trim()) return
+    setLoading(true)
+    setError(null)
+    setHasSearched(true)
+
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ location: location.trim(), category }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Search failed")
+      }
+
+      const data = await res.json()
+      setBusinesses(data.businesses)
+      setStats({
+        total: data.totalCount,
+        withWebsite: data.withWebsite,
+        withoutWebsite: data.withoutWebsite,
+      })
+    } catch (err: any) {
+      setError(err.message)
+      setBusinesses([])
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleEmailLead = (lead: TableLead) => {
-    console.log("Emailing lead:", lead.businessName)
-  }
+  const filtered = businesses.filter((b) => {
+    if (filter === "website") return b.hasWebsite
+    if (filter === "no-website") return !b.hasWebsite
+    return true
+  })
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <DashboardHeader />
-      
-      <div className="flex flex-1 overflow-hidden">
-        {/* Mobile Sidebar Toggle */}
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed bottom-4 left-4 z-50 lg:hidden shadow-lg"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-        </Button>
 
-        {/* Sidebar */}
-        <div className={cn(
-          "fixed inset-y-0 left-0 z-40 transform transition-transform duration-200 lg:relative lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
-          <div className="pt-16 lg:pt-0 h-full">
-            <CategorySidebar
-              selectedCategory={selectedCategory}
-              onSelectCategory={(cat) => {
-                setSelectedCategory(cat)
-                setSidebarOpen(false)
-              }}
-            />
+      <main className="flex-1 flex flex-col">
+        {/* Search Section */}
+        <div className="border-b border-border bg-card p-6">
+          <div className="max-w-4xl mx-auto space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-1">
+                Audit Local Businesses
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Search any area and category to find businesses with and without websites
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="City, state or zip (e.g. Dallas, TX)"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="pl-9"
+                />
+              </div>
+
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="sm:w-64">
+                  <Building2 className="w-4 h-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button
+                onClick={handleSearch}
+                disabled={loading || !location.trim()}
+                className="gap-2"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+                {loading ? "Searching..." : "Search"}
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Mobile Overlay */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Service Area Map */}
-          <div className="p-4 border-b border-border bg-background/50">
-            <ServiceAreaMap />
-          </div>
-
-          {/* Tabs for Feed vs Table View */}
-          <Tabs defaultValue="feed" className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-4 pt-4 border-b border-border bg-background">
-              <TabsList className="bg-muted/50">
-                <TabsTrigger value="feed" className="gap-2">
-                  <LayoutGrid className="w-4 h-4" />
-                  Prospect Feed
-                </TabsTrigger>
-                <TabsTrigger value="table" className="gap-2">
-                  <Table2 className="w-4 h-4" />
-                  CRM Table
-                </TabsTrigger>
-              </TabsList>
+        {/* Results Section */}
+        <div className="flex-1 p-4 sm:p-6">
+          {error && (
+            <div className="max-w-4xl mx-auto mb-4 p-4 bg-destructive/10 text-destructive rounded-lg text-sm">
+              {error}
             </div>
+          )}
 
-            <TabsContent value="feed" className="flex-1 overflow-hidden mt-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <ProspectFeed selectedCategory={selectedCategory} />
-            </TabsContent>
+          {!hasSearched && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Search className="w-12 h-12 text-muted-foreground/40 mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-1">
+                Start a local business audit
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                Enter a location and optionally pick a category to find all businesses in that area.
+                We'll show you which ones have websites and which don't.
+              </p>
+            </div>
+          )}
 
-            <TabsContent value="table" className="flex-1 overflow-auto p-4 mt-0">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Lead Database</h2>
-                <p className="text-sm text-muted-foreground">
-                  Complete CRM view with SEO metadata and contact information
-                </p>
+          {hasSearched && !loading && businesses.length === 0 && !error && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Building2 className="w-12 h-12 text-muted-foreground/40 mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-1">
+                No businesses found
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Try a different location or category
+              </p>
+            </div>
+          )}
+
+          {businesses.length > 0 && (
+            <div className="max-w-7xl mx-auto space-y-4">
+              {/* Stats Bar */}
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge
+                  variant={filter === "all" ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setFilter("all")}
+                >
+                  All ({stats.total})
+                </Badge>
+                <Badge
+                  variant={filter === "website" ? "default" : "outline"}
+                  className="cursor-pointer gap-1"
+                  onClick={() => setFilter("website")}
+                >
+                  <Globe className="w-3 h-3" />
+                  Has Website ({stats.withWebsite})
+                </Badge>
+                <Badge
+                  variant={filter === "no-website" ? "destructive" : "outline"}
+                  className="cursor-pointer gap-1"
+                  onClick={() => setFilter("no-website")}
+                >
+                  <XCircle className="w-3 h-3" />
+                  No Website ({stats.withoutWebsite})
+                </Badge>
               </div>
-              <CRMTable 
-                leads={mockTableLeads}
-                onGeneratePitch={handleGeneratePitch}
-                onEmailLead={handleEmailLead}
-              />
-            </TabsContent>
-          </Tabs>
-        </main>
-      </div>
+
+              {/* Results Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {filtered.map((business) => (
+                  <LeadCard key={business.id} business={business} />
+                ))}
+              </div>
+
+              {filtered.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  No businesses match this filter
+                </p>
+              )}
+            </div>
+          )}
+
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+              <p className="text-sm text-muted-foreground">
+                Searching Google Places & Perplexity...
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   )
 }
