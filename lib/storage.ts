@@ -1,6 +1,15 @@
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
 
+// --- Types ---
+
+export interface Project {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+}
+
 export interface SavedBusiness extends Business {
   savedAt: string
   searchQuery: string
@@ -19,20 +28,144 @@ export interface SearchReport {
   businessCount: number
 }
 
-const BUSINESSES_KEY = "prospectiq_businesses"
-const REPORTS_KEY = "prospectiq_reports"
+// --- Keys ---
+
+const PROJECTS_KEY = "prospectiq_projects"
+const ACTIVE_PROJECT_KEY = "prospectiq_active_project"
+
+function businessesKey(projectId: string) {
+  return `prospectiq_p_${projectId}_businesses`
+}
+function reportsKey(projectId: string) {
+  return `prospectiq_p_${projectId}_reports`
+}
 
 function normalizeName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "").trim()
 }
 
-export function getSavedBusinesses(): SavedBusiness[] {
+// --- Storage Monitor ---
+
+export function getStorageUsage(): { usedMB: number; totalMB: number; percent: number } {
+  let total = 0
+  for (const key in localStorage) {
+    if (localStorage.hasOwnProperty(key)) {
+      total += localStorage.getItem(key)!.length * 2 // UTF-16 = 2 bytes per char
+    }
+  }
+  const usedMB = parseFloat((total / (1024 * 1024)).toFixed(2))
+  const totalMB = 5
+  return { usedMB, totalMB, percent: Math.round((usedMB / totalMB) * 100) }
+}
+
+// --- Project Management ---
+
+export function getProjects(): Project[] {
   if (typeof window === "undefined") return []
   try {
-    const data = localStorage.getItem(BUSINESSES_KEY)
+    const data = localStorage.getItem(PROJECTS_KEY)
     return data ? JSON.parse(data) : []
   } catch {
     return []
+  }
+}
+
+export function createProject(name: string, description?: string): Project {
+  const projects = getProjects()
+  const project: Project = {
+    id: crypto.randomUUID(),
+    name,
+    description,
+    createdAt: new Date().toISOString(),
+  }
+  projects.push(project)
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects))
+  setActiveProject(project.id)
+  return project
+}
+
+export function deleteProject(projectId: string): void {
+  const projects = getProjects().filter((p) => p.id !== projectId)
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects))
+  localStorage.removeItem(businessesKey(projectId))
+  localStorage.removeItem(reportsKey(projectId))
+  // If we deleted the active project, switch to another
+  const active = getActiveProjectId()
+  if (active === projectId) {
+    setActiveProject(projects[0]?.id || "")
+  }
+}
+
+export function getActiveProjectId(): string {
+  if (typeof window === "undefined") return ""
+  return localStorage.getItem(ACTIVE_PROJECT_KEY) || ""
+}
+
+export function setActiveProject(projectId: string): void {
+  localStorage.setItem(ACTIVE_PROJECT_KEY, projectId)
+}
+
+export function getActiveProject(): Project | null {
+  const id = getActiveProjectId()
+  if (!id) return null
+  return getProjects().find((p) => p.id === id) || null
+}
+
+// Migrate old data into a default project if needed
+export function ensureProject(): Project {
+  let projects = getProjects()
+  if (projects.length === 0) {
+    // Check for legacy data
+    const legacyBusinesses = localStorage.getItem("prospectiq_businesses")
+    const legacyReports = localStorage.getItem("prospectiq_reports")
+
+    const project = createProject("My First Project")
+
+    if (legacyBusinesses) {
+      localStorage.setItem(businessesKey(project.id), legacyBusinesses)
+      localStorage.removeItem("prospectiq_businesses")
+    }
+    if (legacyReports) {
+      localStorage.setItem(reportsKey(project.id), legacyReports)
+      localStorage.removeItem("prospectiq_reports")
+    }
+
+    return project
+  }
+
+  const activeId = getActiveProjectId()
+  const active = projects.find((p) => p.id === activeId)
+  if (!active) {
+    setActiveProject(projects[0].id)
+    return projects[0]
+  }
+  return active
+}
+
+// --- Business CRUD (project-scoped) ---
+
+export function getSavedBusinesses(): SavedBusiness[] {
+  if (typeof window === "undefined") return []
+  const pid = getActiveProjectId()
+  if (!pid) return []
+  try {
+    const data = localStorage.getItem(businessesKey(pid))
+    return data ? JSON.parse(data) : []
+  } catch {
+    return []
+  }
+}
+
+function _saveBusinessList(businesses: SavedBusiness[]): void {
+  const pid = getActiveProjectId()
+  if (!pid) return
+  try {
+    localStorage.setItem(businessesKey(pid), JSON.stringify(businesses))
+  } catch (e: any) {
+    if (e?.name === "QuotaExceededError") {
+      throw new Error("Storage full! Export your data and clear old projects to free space.")
+    }
+    throw e
   }
 }
 
@@ -50,47 +183,49 @@ export function saveBusinesses(
 
   let newCount = 0
   let updatedCount = 0
-  const searchQuery = category && category !== "all"
-    ? `${category} in ${location}`
-    : `businesses in ${location}`
+  const searchQuery =
+    category && category !== "all"
+      ? `${category} in ${location}`
+      : `businesses in ${location}`
   const now = new Date().toISOString()
 
   for (const b of businesses) {
     const key = normalizeName(b.name) + "|" + normalizeName(b.address)
-
     if (existingMap.has(key)) {
-      // Update existing — merge data, keep analysis
       const prev = existingMap.get(key)!
       existingMap.set(key, {
         ...prev,
         ...b,
         analysis: prev.analysis,
+        isProspect: prev.isProspect,
+        isDismissed: prev.isDismissed,
+        notes: prev.notes,
         savedAt: prev.savedAt,
         searchQuery: prev.searchQuery,
       })
       updatedCount++
     } else {
-      existingMap.set(key, {
-        ...b,
-        savedAt: now,
-        searchQuery,
-      })
+      existingMap.set(key, { ...b, savedAt: now, searchQuery })
       newCount++
     }
   }
 
-  const all = Array.from(existingMap.values())
-  localStorage.setItem(BUSINESSES_KEY, JSON.stringify(all))
+  _saveBusinessList(Array.from(existingMap.values()))
 
   // Save report
-  saveReport({
-    id: crypto.randomUUID(),
-    location,
-    category: category || "All categories",
-    searchQuery,
-    date: now,
-    businessCount: businesses.length,
-  })
+  const pid = getActiveProjectId()
+  if (pid) {
+    const reports = getReports()
+    reports.unshift({
+      id: crypto.randomUUID(),
+      location,
+      category: category || "All categories",
+      searchQuery,
+      date: now,
+      businessCount: businesses.length,
+    })
+    localStorage.setItem(reportsKey(pid), JSON.stringify(reports.slice(0, 100)))
+  }
 
   return { newCount, updatedCount }
 }
@@ -100,7 +235,7 @@ export function saveAnalysis(businessId: string, analysis: SiteAnalysis): void {
   const idx = businesses.findIndex((b) => b.id === businessId)
   if (idx !== -1) {
     businesses[idx].analysis = analysis
-    localStorage.setItem(BUSINESSES_KEY, JSON.stringify(businesses))
+    _saveBusinessList(businesses)
   }
 }
 
@@ -110,8 +245,8 @@ export function toggleProspect(businessId: string): boolean {
   if (idx !== -1) {
     const wasProspect = businesses[idx].isProspect
     businesses[idx].isProspect = !wasProspect
-    if (!wasProspect) businesses[idx].isDismissed = false // clear dismiss if adding as prospect
-    localStorage.setItem(BUSINESSES_KEY, JSON.stringify(businesses))
+    if (!wasProspect) businesses[idx].isDismissed = false
+    _saveBusinessList(businesses)
     return businesses[idx].isProspect!
   }
   return false
@@ -123,8 +258,8 @@ export function toggleDismiss(businessId: string): boolean {
   if (idx !== -1) {
     const wasDismissed = businesses[idx].isDismissed
     businesses[idx].isDismissed = !wasDismissed
-    if (!wasDismissed) businesses[idx].isProspect = false // clear prospect if dismissing
-    localStorage.setItem(BUSINESSES_KEY, JSON.stringify(businesses))
+    if (!wasDismissed) businesses[idx].isProspect = false
+    _saveBusinessList(businesses)
     return businesses[idx].isDismissed!
   }
   return false
@@ -135,31 +270,25 @@ export function saveNotes(businessId: string, notes: string): void {
   const idx = businesses.findIndex((b) => b.id === businessId)
   if (idx !== -1) {
     businesses[idx].notes = notes
-    localStorage.setItem(BUSINESSES_KEY, JSON.stringify(businesses))
+    _saveBusinessList(businesses)
   }
 }
 
+// --- Reports ---
+
 export function getReports(): SearchReport[] {
   if (typeof window === "undefined") return []
+  const pid = getActiveProjectId()
+  if (!pid) return []
   try {
-    const data = localStorage.getItem(REPORTS_KEY)
+    const data = localStorage.getItem(reportsKey(pid))
     return data ? JSON.parse(data) : []
   } catch {
     return []
   }
 }
 
-function saveReport(report: SearchReport): void {
-  const reports = getReports()
-  reports.unshift(report)
-  // Keep last 100 reports
-  localStorage.setItem(REPORTS_KEY, JSON.stringify(reports.slice(0, 100)))
-}
-
-export function clearAllData(): void {
-  localStorage.removeItem(BUSINESSES_KEY)
-  localStorage.removeItem(REPORTS_KEY)
-}
+// --- Stats ---
 
 export function getStats() {
   const businesses = getSavedBusinesses()
@@ -177,49 +306,34 @@ export function getStats() {
   }
 }
 
+// --- Clear ---
+
+export function clearProjectData(): void {
+  const pid = getActiveProjectId()
+  if (!pid) return
+  localStorage.removeItem(businessesKey(pid))
+  localStorage.removeItem(reportsKey(pid))
+}
+
+// --- CSV Export ---
+
 export function exportToCSV(businesses: SavedBusiness[]): string {
   const headers = [
-    "Name",
-    "Category",
-    "Address",
-    "Phone",
-    "Website",
-    "Facebook",
-    "Web Presence",
-    "Rating",
-    "Reviews",
-    "Source",
-    "Platform",
-    "Estimated Age",
-    "Mobile Friendly",
-    "Has SSL",
-    "Yellow Pages Site",
-    "Analysis Summary",
-    "Search Query",
-    "Notes",
-    "Status",
-    "Saved At",
+    "Name", "Category", "Address", "Phone", "Website", "Facebook",
+    "Web Presence", "Rating", "Reviews", "Source", "Platform",
+    "Estimated Age", "Mobile Friendly", "Has SSL", "Yellow Pages Site",
+    "Analysis Summary", "Search Query", "Notes", "Status", "Saved At",
   ]
 
   const rows = businesses.map((b) => [
-    b.name,
-    b.category || "",
-    b.address,
-    b.phone || "",
-    b.website || "",
-    b.facebook || "",
-    b.webPresence,
-    b.rating?.toString() || "",
-    b.reviewCount?.toString() || "",
-    b.source,
-    b.analysis?.platform || "",
-    b.analysis?.estimatedAge || "",
+    b.name, b.category || "", b.address, b.phone || "",
+    b.website || "", b.facebook || "", b.webPresence,
+    b.rating?.toString() || "", b.reviewCount?.toString() || "",
+    b.source, b.analysis?.platform || "", b.analysis?.estimatedAge || "",
     b.analysis ? (b.analysis.isMobileFriendly ? "Yes" : "No") : "",
     b.analysis ? (b.analysis.hasSSL ? "Yes" : "No") : "",
     b.analysis ? (b.analysis.isYellowPages ? "Yes" : "No") : "",
-    b.analysis?.summary || "",
-    b.searchQuery || "",
-    b.notes || "",
+    b.analysis?.summary || "", b.searchQuery || "", b.notes || "",
     b.isProspect ? "Prospect" : b.isDismissed ? "Dismissed" : "",
     b.savedAt || "",
   ])
@@ -231,8 +345,5 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     return val
   }
 
-  return [
-    headers.join(","),
-    ...rows.map((row) => row.map(escape).join(",")),
-  ].join("\n")
+  return [headers.join(","), ...rows.map((row) => row.map(escape).join(","))].join("\n")
 }

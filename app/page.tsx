@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardHeader } from "@/components/dashboard/header"
 import { LeadCard } from "@/components/dashboard/lead-card"
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,7 @@ import {
   Trash2,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
-import { saveBusinesses } from "@/lib/storage"
+import { saveBusinesses, ensureProject } from "@/lib/storage"
 
 const CATEGORIES = [
   "Restaurants & Cafes",
@@ -65,6 +65,8 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ total: 0, withWebsite: 0, facebookOnly: 0, noPresence: 0 })
   const [saveInfo, setSaveInfo] = useState<string | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+
+  useEffect(() => { ensureProject() }, [])
 
   const handleClearResults = () => {
     setBusinesses([])

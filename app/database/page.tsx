@@ -27,7 +27,7 @@ import {
 import {
   getSavedBusinesses,
   getStats,
-  clearAllData,
+  clearProjectData,
   exportToCSV,
   type SavedBusiness,
 } from "@/lib/storage"
@@ -100,7 +100,7 @@ export default function DatabasePage() {
   }
 
   const handleClear = () => {
-    clearAllData()
+    clearProjectData()
     setBusinesses([])
     setStats(getStats())
     setShowClearConfirm(false)
