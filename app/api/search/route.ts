@@ -91,53 +91,70 @@ async function searchGooglePlaces(query: string): Promise<Business[]> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY
   if (!apiKey) throw new Error("Google Places API key not configured")
 
-  const response = await fetch(
-    "https://places.googleapis.com/v1/places:searchText",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask":
-          "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.primaryTypeDisplayName,places.googleMapsUri",
-      },
-      body: JSON.stringify({
-        textQuery: query,
-        maxResultCount: 20,
-      }),
-    }
-  )
+  const allResults: Business[] = []
+  let pageToken: string | undefined
 
-  if (!response.ok) {
-    const err = await response.text()
-    console.error("Google Places error:", err)
-    throw new Error("Google Places API request failed")
+  // Fetch up to 3 pages (60 results max)
+  for (let page = 0; page < 3; page++) {
+    const body: any = {
+      textQuery: query,
+      maxResultCount: 20,
+    }
+    if (pageToken) body.pageToken = pageToken
+
+    const response = await fetch(
+      "https://places.googleapis.com/v1/places:searchText",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask":
+            "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.primaryTypeDisplayName,places.googleMapsUri,nextPageToken",
+        },
+        body: JSON.stringify(body),
+      }
+    )
+
+    if (!response.ok) {
+      const err = await response.text()
+      console.error("Google Places error:", err)
+      if (page === 0) throw new Error("Google Places API request failed")
+      break
+    }
+
+    const data = await response.json()
+    if (!data.places || data.places.length === 0) break
+
+    const mapped = data.places.map((place: any) => {
+      const website = place.websiteUri || undefined
+      const facebook = website && isFacebookUrl(website) ? website : undefined
+      const actualWebsite = website && !isSocialUrl(website) ? website : undefined
+
+      return {
+        id: place.id || crypto.randomUUID(),
+        name: place.displayName?.text || "Unknown",
+        address: place.formattedAddress || "",
+        phone: place.nationalPhoneNumber || undefined,
+        website: actualWebsite,
+        facebook: facebook,
+        hasWebsite: !!actualWebsite,
+        webPresence: classifyPresence(website, facebook),
+        rating: place.rating || undefined,
+        reviewCount: place.userRatingCount || undefined,
+        category: place.primaryTypeDisplayName?.text || undefined,
+        googleMapsUri: place.googleMapsUri || undefined,
+        source: "google" as const,
+      }
+    })
+
+    allResults.push(...mapped)
+
+    pageToken = data.nextPageToken
+    if (!pageToken) break
   }
 
-  const data = await response.json()
-  if (!data.places) return []
-
-  return data.places.map((place: any) => {
-    const website = place.websiteUri || undefined
-    const facebook = website && isFacebookUrl(website) ? website : undefined
-    const actualWebsite = website && !isSocialUrl(website) ? website : undefined
-
-    return {
-      id: place.id || crypto.randomUUID(),
-      name: place.displayName?.text || "Unknown",
-      address: place.formattedAddress || "",
-      phone: place.nationalPhoneNumber || undefined,
-      website: actualWebsite,
-      facebook: facebook,
-      hasWebsite: !!actualWebsite,
-      webPresence: classifyPresence(website, facebook),
-      rating: place.rating || undefined,
-      reviewCount: place.userRatingCount || undefined,
-      category: place.primaryTypeDisplayName?.text || undefined,
-      googleMapsUri: place.googleMapsUri || undefined,
-      source: "google" as const,
-    }
-  })
+  return allResults
 }
 
 async function searchPerplexity(query: string): Promise<Business[]> {

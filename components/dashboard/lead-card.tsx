@@ -76,7 +76,7 @@ export function LeadCard({ business }: LeadCardProps) {
               {business.name}
             </h3>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center gap-2">
             {business.category && (
               <p className="text-sm text-muted-foreground">{business.category}</p>
             )}
