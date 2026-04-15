@@ -69,22 +69,22 @@ export function LeadCard({ business }: LeadCardProps) {
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 border-border/60 hover:border-primary/30 bg-card">
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
-              <h3 className="font-semibold text-foreground truncate">
-                {business.name}
-              </h3>
-            </div>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+            <h3 className="font-semibold text-foreground truncate">
+              {business.name}
+            </h3>
+          </div>
+          <div className="flex items-center justify-between">
             {business.category && (
               <p className="text-sm text-muted-foreground">{business.category}</p>
             )}
+            <Badge variant={presence.variant} className="shrink-0 gap-1">
+              <PresenceIcon className="w-3 h-3" />
+              {presence.label}
+            </Badge>
           </div>
-          <Badge variant={presence.variant} className="shrink-0 gap-1">
-            <PresenceIcon className="w-3 h-3" />
-            {presence.label}
-          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
