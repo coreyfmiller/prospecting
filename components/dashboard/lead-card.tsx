@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   MapPin,
   Phone,
@@ -12,8 +14,16 @@ import {
   Star,
   Map,
   Facebook,
+  ScanSearch,
+  Loader2,
+  ShieldAlert,
+  Smartphone,
+  Clock,
+  Wrench,
+  AlertTriangle,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
+import type { SiteAnalysis } from "@/app/api/analyze/route"
 
 const presenceConfig = {
   website: { label: "Has Website", variant: "secondary" as const, icon: Globe },
@@ -27,8 +37,34 @@ interface LeadCardProps {
 }
 
 export function LeadCard({ business }: LeadCardProps) {
+  const [analysis, setAnalysis] = useState<SiteAnalysis | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+
   const presence = presenceConfig[business.webPresence]
   const PresenceIcon = presence.icon
+
+  const canAnalyze = business.webPresence === "website" && business.website
+
+  const handleAnalyze = async () => {
+    if (!business.website) return
+    setAnalyzing(true)
+    setAnalyzeError(null)
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: business.website }),
+      })
+      if (!res.ok) throw new Error("Analysis failed")
+      const data = await res.json()
+      setAnalysis(data)
+    } catch {
+      setAnalyzeError("Could not analyze this site")
+    } finally {
+      setAnalyzing(false)
+    }
+  }
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 border-border/60 hover:border-primary/30 bg-card">
@@ -117,6 +153,81 @@ export function LeadCard({ business }: LeadCardProps) {
             </div>
           )}
         </div>
+
+        {/* Analyze Button */}
+        {canAnalyze && !analysis && (
+          <Button
+            onClick={handleAnalyze}
+            disabled={analyzing}
+            variant="outline"
+            size="sm"
+            className="w-full gap-2"
+          >
+            {analyzing ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing site...</>
+            ) : (
+              <><ScanSearch className="w-4 h-4" /> Analyze Website</>
+            )}
+          </Button>
+        )}
+
+        {analyzeError && (
+          <p className="text-xs text-destructive">{analyzeError}</p>
+        )}
+
+        {/* Analysis Results */}
+        {analysis && (
+          <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border/50">
+            <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+              <ScanSearch className="w-3.5 h-3.5 text-primary" />
+              Site Analysis
+            </p>
+
+            <div className="flex flex-wrap gap-1.5">
+              {analysis.platform && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  <Wrench className="w-3 h-3" />
+                  {analysis.platform}
+                </Badge>
+              )}
+              {analysis.isYellowPages && (
+                <Badge variant="destructive" className="text-xs gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  Yellow Pages Site
+                </Badge>
+              )}
+              {analysis.estimatedAge && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <Clock className="w-3 h-3" />
+                  {analysis.estimatedAge}
+                </Badge>
+              )}
+              {!analysis.hasSSL && (
+                <Badge variant="destructive" className="text-xs gap-1">
+                  <ShieldAlert className="w-3 h-3" />
+                  No SSL
+                </Badge>
+              )}
+              {!analysis.isMobileFriendly && (
+                <Badge variant="destructive" className="text-xs gap-1">
+                  <Smartphone className="w-3 h-3" />
+                  Not Mobile Friendly
+                </Badge>
+              )}
+              {analysis.flags
+                .filter((f) => !f.includes("mobile") && !f.includes("SSL") && !f.includes("reach"))
+                .map((flag) => (
+                  <Badge key={flag} variant="outline" className="text-xs">
+                    {flag}
+                  </Badge>
+                ))}
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {analysis.summary}
+            </p>
+          </div>
+        )}
 
         <div className="flex items-center justify-between pt-2 border-t border-border/50">
           <Badge variant="outline" className="text-xs">
