@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const searchText = category && location
+    const searchText = category && category !== "all" && location
       ? `${category} in ${location}`
       : query || `businesses in ${location}`
 
