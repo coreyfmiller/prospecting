@@ -22,6 +22,7 @@ import {
   MapPin,
   Building2,
   Facebook,
+  Trash2,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import { saveBusinesses } from "@/lib/storage"
@@ -63,6 +64,16 @@ export default function Dashboard() {
   const [filter, setFilter] = useState<FilterType>("all")
   const [stats, setStats] = useState({ total: 0, withWebsite: 0, facebookOnly: 0, noPresence: 0 })
   const [saveInfo, setSaveInfo] = useState<string | null>(null)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+
+  const handleClearResults = () => {
+    setBusinesses([])
+    setHasSearched(false)
+    setFilter("all")
+    setStats({ total: 0, withWebsite: 0, facebookOnly: 0, noPresence: 0 })
+    setSaveInfo(null)
+    setShowClearConfirm(false)
+  }
 
   const handleSearch = async () => {
     if (!location.trim()) return
@@ -244,7 +255,37 @@ export default function Dashboard() {
                   <XCircle className="w-3 h-3" />
                   No Online Presence ({stats.noPresence})
                 </Badge>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 ml-auto text-destructive hover:text-destructive"
+                  onClick={() => setShowClearConfirm(true)}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear Results
+                </Button>
               </div>
+
+              {/* Clear Confirmation Dialog */}
+              {showClearConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowClearConfirm(false)}>
+                  <div className="bg-card border border-border rounded-lg p-6 max-w-sm mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Clear search results?</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      This will clear the current results from view. Your saved businesses in the database won't be affected.
+                    </p>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" size="sm" onClick={() => setShowClearConfirm(false)}>
+                        Cancel
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={handleClearResults}>
+                        Clear Results
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Results Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

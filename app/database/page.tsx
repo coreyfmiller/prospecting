@@ -40,6 +40,7 @@ export default function DatabasePage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [stats, setStats] = useState(getStats())
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   useEffect(() => {
     const data = getSavedBusinesses()
@@ -99,11 +100,10 @@ export default function DatabasePage() {
   }
 
   const handleClear = () => {
-    if (confirm("This will delete all saved businesses and search history. Are you sure?")) {
-      clearAllData()
-      setBusinesses([])
-      setStats(getStats())
-    }
+    clearAllData()
+    setBusinesses([])
+    setStats(getStats())
+    setShowClearConfirm(false)
   }
 
   return (
@@ -128,7 +128,7 @@ export default function DatabasePage() {
                 <Download className="w-4 h-4" />
                 Export CSV ({filtered.length})
               </Button>
-              <Button onClick={handleClear} variant="outline" size="sm" className="gap-2 text-destructive hover:text-destructive">
+              <Button onClick={() => setShowClearConfirm(true)} variant="outline" size="sm" className="gap-2 text-destructive hover:text-destructive">
                 <Trash2 className="w-4 h-4" />
                 Clear All
               </Button>
@@ -251,6 +251,26 @@ export default function DatabasePage() {
             </>
           )}
         </div>
+
+        {/* Clear Confirmation Dialog */}
+        {showClearConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowClearConfirm(false)}>
+            <div className="bg-card border border-border rounded-lg p-6 max-w-sm mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Delete all saved data?</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                This will permanently delete all {stats.total} saved businesses, notes, prospect tags, and search history. This cannot be undone.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setShowClearConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleClear}>
+                  Delete Everything
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
