@@ -22,6 +22,7 @@ import {
   Trash2,
   Database,
   ScanSearch,
+  Star,
 } from "lucide-react"
 import {
   getSavedBusinesses,
@@ -31,7 +32,7 @@ import {
   type SavedBusiness,
 } from "@/lib/storage"
 
-type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed" | "yellow-pages"
+type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed" | "yellow-pages" | "prospects"
 
 export default function DatabasePage() {
   const [businesses, setBusinesses] = useState<SavedBusiness[]>([])
@@ -45,6 +46,12 @@ export default function DatabasePage() {
     setBusinesses(data)
     setStats(getStats())
   }, [])
+
+  const refreshData = () => {
+    const data = getSavedBusinesses()
+    setBusinesses(data)
+    setStats(getStats())
+  }
 
   const categories = useMemo(() => {
     const cats = new Set(businesses.map((b) => b.category).filter(Boolean))
@@ -74,6 +81,7 @@ export default function DatabasePage() {
       if (filter === "no-presence") return b.webPresence === "none"
       if (filter === "analyzed") return !!b.analysis
       if (filter === "yellow-pages") return !!b.analysis?.isYellowPages
+      if (filter === "prospects") return !!b.isProspect
 
       return true
     })
@@ -203,6 +211,14 @@ export default function DatabasePage() {
                 Yellow Pages ({stats.yellowPages})
               </Badge>
             )}
+            <Badge
+              variant={filter === "prospects" ? "default" : "outline"}
+              className="cursor-pointer gap-1"
+              onClick={() => setFilter("prospects")}
+            >
+              <Star className="w-3 h-3" />
+              Prospects ({stats.prospects})
+            </Badge>
           </div>
 
           {/* Results */}
@@ -224,7 +240,7 @@ export default function DatabasePage() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((business) => (
-                  <LeadCard key={business.id} business={business} />
+                  <LeadCard key={business.id} business={business} onProspectChange={refreshData} />
                 ))}
               </div>
               {filtered.length === 0 && businesses.length > 0 && (

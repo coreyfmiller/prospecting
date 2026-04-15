@@ -5,6 +5,8 @@ export interface SavedBusiness extends Business {
   savedAt: string
   searchQuery: string
   analysis?: SiteAnalysis
+  isProspect?: boolean
+  notes?: string
 }
 
 export interface SearchReport {
@@ -101,6 +103,26 @@ export function saveAnalysis(businessId: string, analysis: SiteAnalysis): void {
   }
 }
 
+export function toggleProspect(businessId: string): boolean {
+  const businesses = getSavedBusinesses()
+  const idx = businesses.findIndex((b) => b.id === businessId)
+  if (idx !== -1) {
+    businesses[idx].isProspect = !businesses[idx].isProspect
+    localStorage.setItem(BUSINESSES_KEY, JSON.stringify(businesses))
+    return businesses[idx].isProspect!
+  }
+  return false
+}
+
+export function saveNotes(businessId: string, notes: string): void {
+  const businesses = getSavedBusinesses()
+  const idx = businesses.findIndex((b) => b.id === businessId)
+  if (idx !== -1) {
+    businesses[idx].notes = notes
+    localStorage.setItem(BUSINESSES_KEY, JSON.stringify(businesses))
+  }
+}
+
 export function getReports(): SearchReport[] {
   if (typeof window === "undefined") return []
   try {
@@ -134,6 +156,7 @@ export function getStats() {
     noPresence: businesses.filter((b) => b.webPresence === "none").length,
     analyzed: businesses.filter((b) => b.analysis).length,
     yellowPages: businesses.filter((b) => b.analysis?.isYellowPages).length,
+    prospects: businesses.filter((b) => b.isProspect).length,
   }
 }
 
@@ -156,6 +179,8 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     "Yellow Pages Site",
     "Analysis Summary",
     "Search Query",
+    "Notes",
+    "Is Prospect",
     "Saved At",
   ]
 
@@ -177,6 +202,8 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     b.analysis ? (b.analysis.isYellowPages ? "Yes" : "No") : "",
     b.analysis?.summary || "",
     b.searchQuery || "",
+    b.notes || "",
+    b.isProspect ? "Yes" : "No",
     b.savedAt || "",
   ])
 

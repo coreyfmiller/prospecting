@@ -21,10 +21,11 @@ import {
   Clock,
   Wrench,
   AlertTriangle,
+  MessageSquare,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import { saveAnalysis } from "@/lib/storage"
+import { saveAnalysis, toggleProspect, saveNotes } from "@/lib/storage"
 
 const presenceConfig = {
   website: { label: "Has Website", variant: "secondary" as const, icon: Globe },
@@ -34,13 +35,17 @@ const presenceConfig = {
 }
 
 interface LeadCardProps {
-  business: Business & { analysis?: SiteAnalysis }
+  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; notes?: string }
+  onProspectChange?: () => void
 }
 
-export function LeadCard({ business }: LeadCardProps) {
+export function LeadCard({ business, onProspectChange }: LeadCardProps) {
   const [analysis, setAnalysis] = useState<SiteAnalysis | null>(business.analysis || null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [isProspect, setIsProspect] = useState(business.isProspect || false)
+  const [notes, setNotes] = useState(business.notes || "")
+  const [showNotes, setShowNotes] = useState(!!business.notes)
 
   const presence = presenceConfig[business.webPresence]
   const PresenceIcon = presence.icon
@@ -69,8 +74,14 @@ export function LeadCard({ business }: LeadCardProps) {
     }
   }
 
+  const handleToggleProspect = () => {
+    const newVal = toggleProspect(business.id)
+    setIsProspect(newVal)
+    onProspectChange?.()
+  }
+
   return (
-    <Card className="group hover:shadow-lg transition-all duration-200 border-border/60 hover:border-primary/30 bg-card">
+    <Card className={`group hover:shadow-lg transition-all duration-200 border-border/60 hover:border-primary/30 bg-card ${isProspect ? "ring-2 ring-primary/50" : ""}`}>
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
@@ -233,14 +244,51 @@ export function LeadCard({ business }: LeadCardProps) {
         )}
 
         <div className="flex items-center justify-between pt-2 border-t border-border/50">
-          <Badge variant="outline" className="text-xs">
-            {business.source === "both"
-              ? "Google + Perplexity"
-              : business.source === "google"
-              ? "Google Places"
-              : "Perplexity"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {business.source === "both"
+                ? "Google + Perplexity"
+                : business.source === "google"
+                ? "Google Places"
+                : "Perplexity"}
+            </Badge>
+            <button
+              onClick={() => setShowNotes(!showNotes)}
+              className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
+                showNotes || notes
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:bg-muted/50"
+              }`}
+            >
+              <MessageSquare className="w-3 h-3" />
+              {notes ? "Notes" : "Add Note"}
+            </button>
+          </div>
+          <button
+            onClick={handleToggleProspect}
+            className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md transition-colors ${
+              isProspect
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Star className={`w-3.5 h-3.5 ${isProspect ? "fill-primary-foreground" : ""}`} />
+            {isProspect ? "Prospect" : "Add to Prospects"}
+          </button>
         </div>
+
+        {showNotes && (
+          <div className="pt-2">
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              onBlur={() => saveNotes(business.id, notes)}
+              placeholder="Add notes about this business..."
+              className="w-full text-xs p-2 rounded-md border border-border bg-muted/30 text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+              rows={3}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   )
