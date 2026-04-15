@@ -22,10 +22,11 @@ import {
   Wrench,
   AlertTriangle,
   MessageSquare,
+  Ban,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import { saveAnalysis, toggleProspect, saveNotes } from "@/lib/storage"
+import { saveAnalysis, toggleProspect, toggleDismiss, saveNotes } from "@/lib/storage"
 
 const presenceConfig = {
   website: { label: "Has Website", variant: "secondary" as const, icon: Globe },
@@ -35,7 +36,7 @@ const presenceConfig = {
 }
 
 interface LeadCardProps {
-  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; notes?: string }
+  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isDismissed?: boolean; notes?: string }
   onProspectChange?: () => void
 }
 
@@ -44,6 +45,7 @@ export function LeadCard({ business, onProspectChange }: LeadCardProps) {
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [isProspect, setIsProspect] = useState(business.isProspect || false)
+  const [isDismissed, setIsDismissed] = useState(business.isDismissed || false)
   const [notes, setNotes] = useState(business.notes || "")
   const [showNotes, setShowNotes] = useState(!!business.notes)
 
@@ -77,11 +79,25 @@ export function LeadCard({ business, onProspectChange }: LeadCardProps) {
   const handleToggleProspect = () => {
     const newVal = toggleProspect(business.id)
     setIsProspect(newVal)
+    if (newVal) setIsDismissed(false)
     onProspectChange?.()
   }
 
+  const handleToggleDismiss = () => {
+    const newVal = toggleDismiss(business.id)
+    setIsDismissed(newVal)
+    if (newVal) setIsProspect(false)
+    onProspectChange?.()
+  }
+
+  const cardBg = isProspect
+    ? "bg-green-50 dark:bg-green-950/30 ring-1 ring-green-300 dark:ring-green-800"
+    : isDismissed
+    ? "bg-red-50 dark:bg-red-950/30 ring-1 ring-red-300 dark:ring-red-800 opacity-75"
+    : "bg-card"
+
   return (
-    <Card className={`group hover:shadow-lg transition-all duration-200 border-border/60 hover:border-primary/30 overflow-hidden ${isProspect ? "bg-green-50 dark:bg-green-950/30 ring-1 ring-green-300 dark:ring-green-800" : "bg-card"}`}>
+    <Card className={`group hover:shadow-lg transition-all duration-200 border-border/60 hover:border-primary/30 overflow-hidden ${cardBg}`}>
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-2 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
@@ -256,7 +272,7 @@ export function LeadCard({ business, onProspectChange }: LeadCardProps) {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+        <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
               {business.source === "both"
@@ -277,17 +293,30 @@ export function LeadCard({ business, onProspectChange }: LeadCardProps) {
               {notes ? "Notes" : "Add Note"}
             </button>
           </div>
-          <button
-            onClick={handleToggleProspect}
-            className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md transition-colors ${
-              isProspect
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <Star className={`w-3.5 h-3.5 ${isProspect ? "fill-primary-foreground" : ""}`} />
-            {isProspect ? "Prospect" : "Add to Prospects"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleToggleDismiss}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors ${
+                isDismissed
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <Ban className="w-3.5 h-3.5" />
+              {isDismissed ? "Dismissed" : "Dismiss"}
+            </button>
+            <button
+              onClick={handleToggleProspect}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors ${
+                isProspect
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <Star className={`w-3.5 h-3.5 ${isProspect ? "fill-primary-foreground" : ""}`} />
+              {isProspect ? "Prospect" : "Prospect"}
+            </button>
+          </div>
         </div>
 
         {showNotes && (

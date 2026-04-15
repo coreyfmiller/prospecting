@@ -6,6 +6,7 @@ export interface SavedBusiness extends Business {
   searchQuery: string
   analysis?: SiteAnalysis
   isProspect?: boolean
+  isDismissed?: boolean
   notes?: string
 }
 
@@ -107,9 +108,24 @@ export function toggleProspect(businessId: string): boolean {
   const businesses = getSavedBusinesses()
   const idx = businesses.findIndex((b) => b.id === businessId)
   if (idx !== -1) {
-    businesses[idx].isProspect = !businesses[idx].isProspect
+    const wasProspect = businesses[idx].isProspect
+    businesses[idx].isProspect = !wasProspect
+    if (!wasProspect) businesses[idx].isDismissed = false // clear dismiss if adding as prospect
     localStorage.setItem(BUSINESSES_KEY, JSON.stringify(businesses))
     return businesses[idx].isProspect!
+  }
+  return false
+}
+
+export function toggleDismiss(businessId: string): boolean {
+  const businesses = getSavedBusinesses()
+  const idx = businesses.findIndex((b) => b.id === businessId)
+  if (idx !== -1) {
+    const wasDismissed = businesses[idx].isDismissed
+    businesses[idx].isDismissed = !wasDismissed
+    if (!wasDismissed) businesses[idx].isProspect = false // clear prospect if dismissing
+    localStorage.setItem(BUSINESSES_KEY, JSON.stringify(businesses))
+    return businesses[idx].isDismissed!
   }
   return false
 }
@@ -157,6 +173,7 @@ export function getStats() {
     analyzed: businesses.filter((b) => b.analysis).length,
     yellowPages: businesses.filter((b) => b.analysis?.isYellowPages).length,
     prospects: businesses.filter((b) => b.isProspect).length,
+    dismissed: businesses.filter((b) => b.isDismissed).length,
   }
 }
 
@@ -180,7 +197,7 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     "Analysis Summary",
     "Search Query",
     "Notes",
-    "Is Prospect",
+    "Status",
     "Saved At",
   ]
 
@@ -203,7 +220,7 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     b.analysis?.summary || "",
     b.searchQuery || "",
     b.notes || "",
-    b.isProspect ? "Yes" : "No",
+    b.isProspect ? "Prospect" : b.isDismissed ? "Dismissed" : "",
     b.savedAt || "",
   ])
 

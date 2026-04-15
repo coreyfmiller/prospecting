@@ -2,7 +2,7 @@
 
 import { ThemeToggle } from "./theme-toggle"
 import { Button } from "@/components/ui/button"
-import { Zap, Database, Star } from "lucide-react"
+import { Zap, Database, Star, Ban } from "lucide-react"
 import Link from "next/link"
 
 export function DashboardHeader() {
@@ -25,6 +25,12 @@ export function DashboardHeader() {
           <Button variant="ghost" size="sm" className="gap-2">
             <Star className="w-4 h-4" />
             <span className="hidden sm:inline">Prospects</span>
+          </Button>
+        </Link>
+        <Link href="/dismissed">
+          <Button variant="ghost" size="sm" className="gap-2">
+            <Ban className="w-4 h-4" />
+            <span className="hidden sm:inline">Dismissed</span>
           </Button>
         </Link>
       </div>
