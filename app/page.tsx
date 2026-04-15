@@ -19,10 +19,9 @@ import {
   Loader2,
   Globe,
   XCircle,
-  LayoutGrid,
-  Table2,
   MapPin,
   Building2,
+  Facebook,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 
@@ -51,7 +50,7 @@ const CATEGORIES = [
   "Cleaning Services",
 ]
 
-type FilterType = "all" | "website" | "no-website"
+type FilterType = "all" | "website" | "facebook-only" | "no-presence"
 
 export default function Dashboard() {
   const [location, setLocation] = useState("")
@@ -61,7 +60,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [hasSearched, setHasSearched] = useState(false)
   const [filter, setFilter] = useState<FilterType>("all")
-  const [stats, setStats] = useState({ total: 0, withWebsite: 0, withoutWebsite: 0 })
+  const [stats, setStats] = useState({ total: 0, withWebsite: 0, facebookOnly: 0, noPresence: 0 })
 
   const handleSearch = async () => {
     if (!location.trim()) return
@@ -86,7 +85,8 @@ export default function Dashboard() {
       setStats({
         total: data.totalCount,
         withWebsite: data.withWebsite,
-        withoutWebsite: data.withoutWebsite,
+        facebookOnly: data.facebookOnly,
+        noPresence: data.noPresence,
       })
     } catch (err: any) {
       setError(err.message)
@@ -97,8 +97,9 @@ export default function Dashboard() {
   }
 
   const filtered = businesses.filter((b) => {
-    if (filter === "website") return b.hasWebsite
-    if (filter === "no-website") return !b.hasWebsite
+    if (filter === "website") return b.webPresence === "website"
+    if (filter === "facebook-only") return b.webPresence === "facebook-only" || b.webPresence === "social-only"
+    if (filter === "no-presence") return b.webPresence === "none"
     return true
   })
 
@@ -215,12 +216,20 @@ export default function Dashboard() {
                   Has Website ({stats.withWebsite})
                 </Badge>
                 <Badge
-                  variant={filter === "no-website" ? "destructive" : "outline"}
+                  variant={filter === "facebook-only" ? "default" : "outline"}
                   className="cursor-pointer gap-1"
-                  onClick={() => setFilter("no-website")}
+                  onClick={() => setFilter("facebook-only")}
+                >
+                  <Facebook className="w-3 h-3" />
+                  Facebook Only ({stats.facebookOnly})
+                </Badge>
+                <Badge
+                  variant={filter === "no-presence" ? "destructive" : "outline"}
+                  className="cursor-pointer gap-1"
+                  onClick={() => setFilter("no-presence")}
                 >
                   <XCircle className="w-3 h-3" />
-                  No Website ({stats.withoutWebsite})
+                  No Online Presence ({stats.noPresence})
                 </Badge>
               </div>
 

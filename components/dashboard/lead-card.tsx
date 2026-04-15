@@ -11,14 +11,25 @@ import {
   XCircle,
   Star,
   Map,
+  Facebook,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
+
+const presenceConfig = {
+  website: { label: "Has Website", variant: "secondary" as const, icon: Globe },
+  "facebook-only": { label: "Facebook Only", variant: "outline" as const, icon: Facebook },
+  "social-only": { label: "Social Only", variant: "outline" as const, icon: Globe },
+  none: { label: "No Online Presence", variant: "destructive" as const, icon: XCircle },
+}
 
 interface LeadCardProps {
   business: Business
 }
 
 export function LeadCard({ business }: LeadCardProps) {
+  const presence = presenceConfig[business.webPresence]
+  const PresenceIcon = presence.icon
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 border-border/60 hover:border-primary/30 bg-card">
       <CardHeader className="pb-3">
@@ -34,15 +45,9 @@ export function LeadCard({ business }: LeadCardProps) {
               <p className="text-sm text-muted-foreground">{business.category}</p>
             )}
           </div>
-          <Badge
-            variant={business.hasWebsite ? "secondary" : "destructive"}
-            className="shrink-0 gap-1"
-          >
-            {business.hasWebsite ? (
-              <><Globe className="w-3 h-3" /> Has Website</>
-            ) : (
-              <><XCircle className="w-3 h-3" /> No Website</>
-            )}
+          <Badge variant={presence.variant} className="shrink-0 gap-1">
+            <PresenceIcon className="w-3 h-3" />
+            {presence.label}
           </Badge>
         </div>
       </CardHeader>
@@ -82,6 +87,19 @@ export function LeadCard({ business }: LeadCardProps) {
                 className="truncate hover:text-primary transition-colors"
               >
                 {business.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+              </a>
+            </div>
+          )}
+          {business.facebook && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Facebook className="w-4 h-4 shrink-0" />
+              <a
+                href={business.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate hover:text-primary transition-colors"
+              >
+                Facebook Page
               </a>
             </div>
           )}
