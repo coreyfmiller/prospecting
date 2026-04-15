@@ -23,9 +23,11 @@ import {
   Building2,
   Facebook,
   Trash2,
+  ShieldCheck,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import { saveBusinesses, ensureProject } from "@/lib/storage"
+import { isBlocked, isBlockChainsEnabled, setBlockChainsEnabled } from "@/lib/blocklist"
 
 const CATEGORIES = [
   "Restaurants & Cafes",
@@ -65,8 +67,24 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ total: 0, withWebsite: 0, facebookOnly: 0, noPresence: 0 })
   const [saveInfo, setSaveInfo] = useState<string | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [blockChains, setBlockChains] = useState(true)
+  const [blockedCount, setBlockedCount] = useState(0)
 
-  useEffect(() => { ensureProject() }, [])
+  useEffect(() => {
+    ensureProject()
+    setBlockChains(isBlockChainsEnabled())
+  }, [])
+
+  const handleToggleBlockChains = () => {
+    const newVal = !blockChains
+    setBlockChains(newVal)
+    setBlockChainsEnabled(newVal)
+  }
+
+  const handleBlock = (name: string) => {
+    // Re-filter to remove the blocked business
+    setBusinesses((prev) => prev.filter((b) => b.name !== name))
+  }
 
   const handleClearResults = () => {
     setBusinesses([])
@@ -96,21 +114,27 @@ export default function Dashboard() {
       }
 
       const data = await res.json()
-      setBusinesses(data.businesses)
+      
+      // Filter out blocked businesses
+      const unblocked = data.businesses.filter((b: Business) => !isBlocked(b.name))
+      const blocked = data.businesses.length - unblocked.length
+      setBlockedCount(blocked)
+      
+      setBusinesses(unblocked)
       setStats({
-        total: data.totalCount,
-        withWebsite: data.withWebsite,
-        facebookOnly: data.facebookOnly,
-        noPresence: data.noPresence,
+        total: unblocked.length,
+        withWebsite: unblocked.filter((b: Business) => b.webPresence === "website").length,
+        facebookOnly: unblocked.filter((b: Business) => b.webPresence === "facebook-only" || b.webPresence === "social-only").length,
+        noPresence: unblocked.filter((b: Business) => b.webPresence === "none").length,
       })
 
       // Auto-save to localStorage
       const { newCount, updatedCount } = saveBusinesses(
-        data.businesses,
+        unblocked,
         location.trim(),
         category
       )
-      setSaveInfo(`Saved ${newCount} new, updated ${updatedCount} existing`)
+      setSaveInfo(`Saved ${newCount} new, updated ${updatedCount} existing${blocked > 0 ? `, ${blocked} chains filtered` : ""}`)
     } catch (err: any) {
       setError(err.message)
       setBusinesses([])
@@ -182,6 +206,20 @@ export default function Dashboard() {
                 )}
                 {loading ? "Searching..." : "Search"}
               </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleToggleBlockChains}
+                className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border transition-colors ${
+                  blockChains
+                    ? "bg-primary/10 border-primary/30 text-primary"
+                    : "bg-muted/30 border-border text-muted-foreground"
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                {blockChains ? "Hiding big chains" : "Showing all businesses"}
+              </button>
             </div>
           </div>
         </div>
@@ -292,7 +330,7 @@ export default function Dashboard() {
               {/* Results Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((business) => (
-                  <LeadCard key={business.id} business={business} />
+                  <LeadCard key={business.id} business={business} onBlock={handleBlock} />
                 ))}
               </div>
 

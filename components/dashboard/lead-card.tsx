@@ -23,10 +23,12 @@ import {
   AlertTriangle,
   MessageSquare,
   Ban,
+  EyeOff,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
 import { saveAnalysis, toggleProspect, toggleDismiss, saveNotes } from "@/lib/storage"
+import { addToBlocklist } from "@/lib/blocklist"
 
 const presenceConfig = {
   website: { label: "Has Website", variant: "secondary" as const, icon: Globe },
@@ -38,9 +40,10 @@ const presenceConfig = {
 interface LeadCardProps {
   business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isDismissed?: boolean; notes?: string }
   onProspectChange?: () => void
+  onBlock?: (name: string) => void
 }
 
-export function LeadCard({ business, onProspectChange }: LeadCardProps) {
+export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps) {
   const [analysis, setAnalysis] = useState<SiteAnalysis | null>(business.analysis || null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
@@ -292,6 +295,19 @@ export function LeadCard({ business, onProspectChange }: LeadCardProps) {
               <MessageSquare className="w-3 h-3" />
               {notes ? "Notes" : "Add Note"}
             </button>
+            {onBlock && (
+              <button
+                onClick={() => {
+                  addToBlocklist(business.name)
+                  onBlock(business.name)
+                }}
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                title="Block this business from future results"
+              >
+                <EyeOff className="w-3 h-3" />
+                Block
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
