@@ -60,7 +60,9 @@ export async function POST(req: NextRequest) {
 
     const [googleResults, perplexityResults] = await Promise.allSettled([
       searchGooglePlaces(searchText),
-      searchPerplexity(searchText),
+      // Perplexity disabled for now
+      // searchPerplexity(searchText),
+      Promise.resolve([]),
     ])
 
     const google = googleResults.status === "fulfilled" ? googleResults.value : []
