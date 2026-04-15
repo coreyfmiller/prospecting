@@ -81,12 +81,12 @@ export function LeadCard({ business, onProspectChange }: LeadCardProps) {
   }
 
   return (
-    <Card className={`group hover:shadow-lg transition-all duration-200 border-border/60 hover:border-primary/30 bg-card ${isProspect ? "ring-2 ring-primary/50" : ""}`}>
+    <Card className={`group hover:shadow-lg transition-all duration-200 border-border/60 hover:border-primary/30 overflow-hidden ${isProspect ? "bg-green-50 dark:bg-green-950/30 ring-1 ring-green-300 dark:ring-green-800" : "bg-card"}`}>
       <CardHeader className="pb-3">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
-            <h3 className="font-semibold text-foreground truncate">
+            <h3 className="font-semibold text-foreground truncate min-w-0">
               {business.name}
             </h3>
           </div>
