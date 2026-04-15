@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
+import { saveAnalysis } from "@/lib/storage"
 
 const presenceConfig = {
   website: { label: "Has Website", variant: "secondary" as const, icon: Globe },
@@ -33,11 +34,11 @@ const presenceConfig = {
 }
 
 interface LeadCardProps {
-  business: Business
+  business: Business & { analysis?: SiteAnalysis }
 }
 
 export function LeadCard({ business }: LeadCardProps) {
-  const [analysis, setAnalysis] = useState<SiteAnalysis | null>(null)
+  const [analysis, setAnalysis] = useState<SiteAnalysis | null>(business.analysis || null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
 
@@ -59,6 +60,8 @@ export function LeadCard({ business }: LeadCardProps) {
       if (!res.ok) throw new Error("Analysis failed")
       const data = await res.json()
       setAnalysis(data)
+      // Persist to localStorage
+      saveAnalysis(business.id, data)
     } catch {
       setAnalyzeError("Could not analyze this site")
     } finally {

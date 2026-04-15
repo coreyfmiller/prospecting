@@ -24,6 +24,7 @@ import {
   Facebook,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
+import { saveBusinesses } from "@/lib/storage"
 
 const CATEGORIES = [
   "Restaurants & Cafes",
@@ -61,6 +62,7 @@ export default function Dashboard() {
   const [hasSearched, setHasSearched] = useState(false)
   const [filter, setFilter] = useState<FilterType>("all")
   const [stats, setStats] = useState({ total: 0, withWebsite: 0, facebookOnly: 0, noPresence: 0 })
+  const [saveInfo, setSaveInfo] = useState<string | null>(null)
 
   const handleSearch = async () => {
     if (!location.trim()) return
@@ -88,6 +90,14 @@ export default function Dashboard() {
         facebookOnly: data.facebookOnly,
         noPresence: data.noPresence,
       })
+
+      // Auto-save to localStorage
+      const { newCount, updatedCount } = saveBusinesses(
+        data.businesses,
+        location.trim(),
+        category
+      )
+      setSaveInfo(`Saved ${newCount} new, updated ${updatedCount} existing`)
     } catch (err: any) {
       setError(err.message)
       setBusinesses([])
@@ -198,7 +208,10 @@ export default function Dashboard() {
 
           {businesses.length > 0 && (
             <div className="max-w-7xl mx-auto space-y-4">
-              {/* Stats Bar */}
+              {/* Save Info + Stats Bar */}
+              {saveInfo && (
+                <p className="text-xs text-muted-foreground">{saveInfo}</p>
+              )}
               <div className="flex flex-wrap items-center gap-3">
                 <Badge
                   variant={filter === "all" ? "default" : "outline"}
