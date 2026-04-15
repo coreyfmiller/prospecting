@@ -15,6 +15,7 @@ export interface SavedBusiness extends Business {
   searchQuery: string
   analysis?: SiteAnalysis
   isProspect?: boolean
+  isPriority?: boolean
   isDismissed?: boolean
   notes?: string
 }
@@ -245,9 +246,28 @@ export function toggleProspect(businessId: string): boolean {
   if (idx !== -1) {
     const wasProspect = businesses[idx].isProspect
     businesses[idx].isProspect = !wasProspect
-    if (!wasProspect) businesses[idx].isDismissed = false
+    if (!wasProspect) {
+      businesses[idx].isDismissed = false
+      businesses[idx].isPriority = false
+    }
     _saveBusinessList(businesses)
     return businesses[idx].isProspect!
+  }
+  return false
+}
+
+export function togglePriority(businessId: string): boolean {
+  const businesses = getSavedBusinesses()
+  const idx = businesses.findIndex((b) => b.id === businessId)
+  if (idx !== -1) {
+    const wasPriority = businesses[idx].isPriority
+    businesses[idx].isPriority = !wasPriority
+    if (!wasPriority) {
+      businesses[idx].isProspect = false
+      businesses[idx].isDismissed = false
+    }
+    _saveBusinessList(businesses)
+    return businesses[idx].isPriority!
   }
   return false
 }
@@ -258,7 +278,10 @@ export function toggleDismiss(businessId: string): boolean {
   if (idx !== -1) {
     const wasDismissed = businesses[idx].isDismissed
     businesses[idx].isDismissed = !wasDismissed
-    if (!wasDismissed) businesses[idx].isProspect = false
+    if (!wasDismissed) {
+      businesses[idx].isProspect = false
+      businesses[idx].isPriority = false
+    }
     _saveBusinessList(businesses)
     return businesses[idx].isDismissed!
   }
@@ -302,6 +325,7 @@ export function getStats() {
     analyzed: businesses.filter((b) => b.analysis).length,
     yellowPages: businesses.filter((b) => b.analysis?.isYellowPages).length,
     prospects: businesses.filter((b) => b.isProspect).length,
+    priority: businesses.filter((b) => b.isPriority).length,
     dismissed: businesses.filter((b) => b.isDismissed).length,
   }
 }
@@ -334,7 +358,7 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     b.analysis ? (b.analysis.hasSSL ? "Yes" : "No") : "",
     b.analysis ? (b.analysis.isYellowPages ? "Yes" : "No") : "",
     b.analysis?.summary || "", b.searchQuery || "", b.notes || "",
-    b.isProspect ? "Prospect" : b.isDismissed ? "Dismissed" : "",
+    b.isProspect ? "Prospect" : b.isPriority ? "Priority" : b.isDismissed ? "Dismissed" : "",
     b.savedAt || "",
   ])
 

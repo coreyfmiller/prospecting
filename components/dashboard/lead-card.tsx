@@ -24,10 +24,11 @@ import {
   MessageSquare,
   Ban,
   EyeOff,
+  Flame,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import { saveAnalysis, toggleProspect, toggleDismiss, saveNotes } from "@/lib/storage"
+import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes } from "@/lib/storage"
 import { addToBlocklist } from "@/lib/blocklist"
 
 const presenceConfig = {
@@ -38,7 +39,7 @@ const presenceConfig = {
 }
 
 interface LeadCardProps {
-  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isDismissed?: boolean; notes?: string }
+  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string }
   onProspectChange?: () => void
   onBlock?: (name: string) => void
 }
@@ -48,6 +49,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [isProspect, setIsProspect] = useState(business.isProspect || false)
+  const [isPriority, setIsPriority] = useState(business.isPriority || false)
   const [isDismissed, setIsDismissed] = useState(business.isDismissed || false)
   const [notes, setNotes] = useState(business.notes || "")
   const [showNotes, setShowNotes] = useState(!!business.notes)
@@ -82,18 +84,27 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const handleToggleProspect = () => {
     const newVal = toggleProspect(business.id)
     setIsProspect(newVal)
-    if (newVal) setIsDismissed(false)
+    if (newVal) { setIsDismissed(false); setIsPriority(false) }
+    onProspectChange?.()
+  }
+
+  const handleTogglePriority = () => {
+    const newVal = togglePriority(business.id)
+    setIsPriority(newVal)
+    if (newVal) { setIsProspect(false); setIsDismissed(false) }
     onProspectChange?.()
   }
 
   const handleToggleDismiss = () => {
     const newVal = toggleDismiss(business.id)
     setIsDismissed(newVal)
-    if (newVal) setIsProspect(false)
+    if (newVal) { setIsProspect(false); setIsPriority(false) }
     onProspectChange?.()
   }
 
-  const cardBg = isProspect
+  const cardBg = isPriority
+    ? "bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-400 dark:ring-amber-700"
+    : isProspect
     ? "bg-green-50 dark:bg-green-950/30 ring-1 ring-green-300 dark:ring-green-800"
     : isDismissed
     ? "bg-red-50 dark:bg-red-950/30 ring-1 ring-red-300 dark:ring-red-800 opacity-75"
@@ -319,7 +330,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
               }`}
             >
               <Ban className="w-3.5 h-3.5" />
-              {isDismissed ? "Dismissed" : "Dismiss"}
+              Dismiss
             </button>
             <button
               onClick={handleToggleProspect}
@@ -330,7 +341,18 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
               }`}
             >
               <Star className={`w-3.5 h-3.5 ${isProspect ? "fill-primary-foreground" : ""}`} />
-              {isProspect ? "Prospect" : "Prospect"}
+              Prospect
+            </button>
+            <button
+              onClick={handleTogglePriority}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors ${
+                isPriority
+                  ? "bg-amber-500 text-white"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <Flame className={`w-3.5 h-3.5 ${isPriority ? "fill-white" : ""}`} />
+              Priority
             </button>
           </div>
         </div>
