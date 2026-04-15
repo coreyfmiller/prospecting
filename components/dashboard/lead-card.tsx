@@ -153,6 +153,19 @@ export function LeadCard({ business, onProspectChange }: LeadCardProps) {
               </a>
             </div>
           )}
+          {business.socialUrl && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Globe className="w-4 h-4 shrink-0" />
+              <a
+                href={business.socialUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate hover:text-primary transition-colors"
+              >
+                {business.socialUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+              </a>
+            </div>
+          )}
           {business.googleMapsUri && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Map className="w-4 h-4 shrink-0" />

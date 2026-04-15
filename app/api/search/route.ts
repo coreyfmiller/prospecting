@@ -9,6 +9,7 @@ export interface Business {
   phone?: string
   website?: string
   facebook?: string
+  socialUrl?: string
   hasWebsite: boolean
   webPresence: WebPresence
   rating?: number
@@ -130,6 +131,7 @@ async function searchGooglePlaces(query: string): Promise<Business[]> {
       const website = place.websiteUri || undefined
       const facebook = website && isFacebookUrl(website) ? website : undefined
       const actualWebsite = website && !isSocialUrl(website) ? website : undefined
+      const socialUrl = website && isSocialUrl(website) && !isFacebookUrl(website) ? website : undefined
 
       return {
         id: place.id || crypto.randomUUID(),
@@ -138,6 +140,7 @@ async function searchGooglePlaces(query: string): Promise<Business[]> {
         phone: place.nationalPhoneNumber || undefined,
         website: actualWebsite,
         facebook: facebook,
+        socialUrl: socialUrl,
         hasWebsite: !!actualWebsite,
         webPresence: classifyPresence(website, facebook),
         rating: place.rating || undefined,
@@ -199,6 +202,7 @@ async function searchPerplexity(query: string): Promise<Business[]> {
     return parsed.map((b: any) => {
       const website = b.website && !isSocialUrl(b.website) ? b.website : undefined
       const facebook = b.facebook || (b.website && isFacebookUrl(b.website) ? b.website : undefined)
+      const socialUrl = b.website && isSocialUrl(b.website) && !isFacebookUrl(b.website) ? b.website : undefined
 
       return {
         id: crypto.randomUUID(),
@@ -207,6 +211,7 @@ async function searchPerplexity(query: string): Promise<Business[]> {
         phone: b.phone || undefined,
         website,
         facebook,
+        socialUrl,
         hasWebsite: !!website,
         webPresence: classifyPresence(b.website, facebook),
         source: "perplexity" as const,
