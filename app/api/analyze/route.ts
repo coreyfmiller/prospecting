@@ -163,12 +163,17 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
     flags.push("Missing DOCTYPE")
   }
 
-  // Extract copyright year
+  // Extract copyright year — look for copyright/© anywhere near a year
   const copyrightMatches = html.match(
-    /(?:©|&copy;|copyright)\s*(\d{4})/gi
+    /(?:©|&copy;|copyright)[\s\S]{0,100}?(\d{4})/gi
   )
-  if (copyrightMatches) {
-    const years = copyrightMatches
+  // Also look for "All rights reserved" near a year
+  const rightsMatches = html.match(
+    /(\d{4})[\s\S]{0,50}?all\s*rights\s*reserved/gi
+  )
+  const allMatches = [...(copyrightMatches || []), ...(rightsMatches || [])]
+  if (allMatches.length > 0) {
+    const years = allMatches
       .map((m) => {
         const y = m.match(/(\d{4})/)
         return y ? parseInt(y[1]) : null
