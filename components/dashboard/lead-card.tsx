@@ -28,7 +28,7 @@ import {
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes } from "@/lib/storage"
+import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, type PipelineStage } from "@/lib/storage"
 import { addToBlocklist } from "@/lib/blocklist"
 
 const presenceConfig = {
@@ -39,7 +39,7 @@ const presenceConfig = {
 }
 
 interface LeadCardProps {
-  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string }
+  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage }
   onProspectChange?: () => void
   onBlock?: (name: string) => void
 }
@@ -53,6 +53,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [isDismissed, setIsDismissed] = useState(business.isDismissed || false)
   const [notes, setNotes] = useState(business.notes || "")
   const [showNotes, setShowNotes] = useState(!!business.notes)
+  const [stage, setStage] = useState<PipelineStage>(business.pipelineStage || "none")
 
   const presence = presenceConfig[business.webPresence]
   const PresenceIcon = presence.icon
@@ -356,6 +357,35 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
             </button>
           </div>
         </div>
+
+        {/* Pipeline Stage */}
+        {(isProspect || isPriority) && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {(["contacted", "meeting", "proposal", "won", "lost"] as PipelineStage[]).map((s) => {
+              const config: Record<string, { label: string; color: string; active: string }> = {
+                contacted: { label: "Contacted", color: "bg-muted/50 text-muted-foreground", active: "bg-blue-500 text-white" },
+                meeting: { label: "Meeting", color: "bg-muted/50 text-muted-foreground", active: "bg-violet-500 text-white" },
+                proposal: { label: "Proposal", color: "bg-muted/50 text-muted-foreground", active: "bg-amber-500 text-white" },
+                won: { label: "Won", color: "bg-muted/50 text-muted-foreground", active: "bg-green-600 text-white" },
+                lost: { label: "Lost", color: "bg-muted/50 text-muted-foreground", active: "bg-red-500 text-white" },
+              }
+              const c = config[s]
+              return (
+                <button
+                  key={s}
+                  onClick={() => {
+                    const newStage = stage === s ? "none" : s
+                    setStage(newStage)
+                    setPipelineStage(business.id, newStage)
+                  }}
+                  className={`text-xs px-2 py-1 rounded-full transition-colors ${stage === s ? c.active : c.color} hover:opacity-80`}
+                >
+                  {c.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {showNotes && (
           <div className="pt-2">

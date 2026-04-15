@@ -24,6 +24,7 @@ import {
   Facebook,
   Trash2,
   ShieldCheck,
+  ScanSearch,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import { saveBusinesses, ensureProject } from "@/lib/storage"
@@ -69,6 +70,8 @@ export default function Dashboard() {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [blockChains, setBlockChains] = useState(true)
   const [blockedCount, setBlockedCount] = useState(0)
+  const [analyzingAll, setAnalyzingAll] = useState(false)
+  const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 })
 
   useEffect(() => {
     ensureProject()
@@ -84,6 +87,31 @@ export default function Dashboard() {
   const handleBlock = (name: string) => {
     // Re-filter to remove the blocked business
     setBusinesses((prev) => prev.filter((b) => b.name !== name))
+  }
+
+  const handleAnalyzeAll = async () => {
+    const toAnalyze = businesses.filter((b) => b.webPresence === "website" && b.website)
+    if (toAnalyze.length === 0) return
+    setAnalyzingAll(true)
+    setAnalyzeProgress({ done: 0, total: toAnalyze.length })
+
+    for (let i = 0; i < toAnalyze.length; i++) {
+      try {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: toAnalyze[i].website }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          const { saveAnalysis } = await import("@/lib/storage")
+          saveAnalysis(toAnalyze[i].id, data)
+        }
+      } catch {}
+      setAnalyzeProgress({ done: i + 1, total: toAnalyze.length })
+    }
+
+    setAnalyzingAll(false)
   }
 
   const handleClearResults = () => {
@@ -295,6 +323,20 @@ export default function Dashboard() {
                   <XCircle className="w-3 h-3" />
                   No Online Presence ({stats.noPresence})
                 </Badge>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={handleAnalyzeAll}
+                  disabled={analyzingAll || businesses.filter((b) => b.webPresence === "website").length === 0}
+                >
+                  {analyzingAll ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing {analyzeProgress.done}/{analyzeProgress.total}</>
+                  ) : (
+                    <><ScanSearch className="w-3.5 h-3.5" /> Analyze All</>
+                  )}
+                </Button>
 
                 <Button
                   variant="outline"

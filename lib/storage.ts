@@ -10,6 +10,8 @@ export interface Project {
   createdAt: string
 }
 
+export type PipelineStage = "none" | "contacted" | "meeting" | "proposal" | "won" | "lost"
+
 export interface SavedBusiness extends Business {
   savedAt: string
   searchQuery: string
@@ -18,6 +20,7 @@ export interface SavedBusiness extends Business {
   isPriority?: boolean
   isDismissed?: boolean
   notes?: string
+  pipelineStage?: PipelineStage
 }
 
 export interface SearchReport {
@@ -297,6 +300,15 @@ export function saveNotes(businessId: string, notes: string): void {
   }
 }
 
+export function setPipelineStage(businessId: string, stage: PipelineStage): void {
+  const businesses = getSavedBusinesses()
+  const idx = businesses.findIndex((b) => b.id === businessId)
+  if (idx !== -1) {
+    businesses[idx].pipelineStage = stage
+    _saveBusinessList(businesses)
+  }
+}
+
 // --- Reports ---
 
 export function getReports(): SearchReport[] {
@@ -346,7 +358,7 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     "Name", "Category", "Address", "Phone", "Website", "Facebook",
     "Web Presence", "Rating", "Reviews", "Source", "Platform",
     "Estimated Age", "Mobile Friendly", "Has SSL", "Yellow Pages Site",
-    "Analysis Summary", "Search Query", "Notes", "Status", "Saved At",
+    "Analysis Summary", "Search Query", "Notes", "Status", "Pipeline Stage", "Saved At",
   ]
 
   const rows = businesses.map((b) => [
@@ -359,6 +371,7 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     b.analysis ? (b.analysis.isYellowPages ? "Yes" : "No") : "",
     b.analysis?.summary || "", b.searchQuery || "", b.notes || "",
     b.isProspect ? "Prospect" : b.isPriority ? "Priority" : b.isDismissed ? "Dismissed" : "",
+    b.pipelineStage || "",
     b.savedAt || "",
   ])
 
