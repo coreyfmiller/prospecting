@@ -9,20 +9,24 @@ import { Badge } from "@/components/ui/badge"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { Search, Globe, XCircle, Facebook, Download, SearchCheck, ScanSearch } from "lucide-react"
-import { getSavedBusinesses, exportToCSV, type SavedBusiness } from "@/lib/storage"
+import { Search, Globe, XCircle, Facebook, Download, SearchCheck, ScanSearch, Paintbrush, Bot } from "lucide-react"
+import { getSavedBusinesses, exportToCSV, SERVICE_TAGS, type SavedBusiness } from "@/lib/storage"
 
-type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed"
+type FilterType = "all" | "website" | "facebook-only" | "no-presence"
 
-export default function SEOPage() {
+export default function ServicesPage() {
   const [allBusinesses, setAllBusinesses] = useState<SavedBusiness[]>([])
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
+  const [serviceFilter, setServiceFilter] = useState("all")
 
   const loadData = () => {
-    setAllBusinesses(getSavedBusinesses().filter((b) => b.needsSEO))
+    const data = getSavedBusinesses().filter((b) =>
+      b.serviceTags?.length || b.needsSEO
+    )
+    setAllBusinesses(data)
   }
   useEffect(() => { loadData() }, [])
 
@@ -31,13 +35,15 @@ export default function SEOPage() {
     return Array.from(cats).sort() as string[]
   }, [allBusinesses])
 
-  const stats = useMemo(() => ({
-    total: allBusinesses.length,
-    withWebsite: allBusinesses.filter((b) => b.webPresence === "website").length,
-    facebookOnly: allBusinesses.filter((b) => b.webPresence === "facebook-only" || b.webPresence === "social-only").length,
-    noPresence: allBusinesses.filter((b) => b.webPresence === "none").length,
-    analyzed: allBusinesses.filter((b) => b.analysis).length,
-  }), [allBusinesses])
+  const tagCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const tag of SERVICE_TAGS) {
+      counts[tag.id] = allBusinesses.filter((b) =>
+        b.serviceTags?.includes(tag.id) || (tag.id === "pitch-seo" && b.needsSEO)
+      ).length
+    }
+    return counts
+  }, [allBusinesses])
 
   const filtered = useMemo(() => {
     let result = allBusinesses.filter((b) => {
@@ -46,26 +52,26 @@ export default function SEOPage() {
         if (!b.name.toLowerCase().includes(term) &&
             !b.address.toLowerCase().includes(term) &&
             !b.category?.toLowerCase().includes(term) &&
-            !b.phone?.includes(term) &&
             !b.notes?.toLowerCase().includes(term)) return false
       }
       if (categoryFilter !== "all" && b.category !== categoryFilter) return false
+      if (serviceFilter !== "all") {
+        const tags = b.serviceTags || (b.needsSEO ? ["pitch-seo"] : [])
+        if (!tags.includes(serviceFilter)) return false
+      }
       if (filter === "website") return b.webPresence === "website"
       if (filter === "facebook-only") return b.webPresence === "facebook-only" || b.webPresence === "social-only"
       if (filter === "no-presence") return b.webPresence === "none"
-      if (filter === "analyzed") return !!b.analysis
       return true
     })
-
     result.sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name)
       if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0)
       if (sortBy === "date") return new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime()
       return 0
     })
-
     return result
-  }, [allBusinesses, filter, searchTerm, categoryFilter, sortBy])
+  }, [allBusinesses, filter, searchTerm, categoryFilter, sortBy, serviceFilter])
 
   const handleExport = () => {
     const csv = exportToCSV(filtered)
@@ -73,7 +79,7 @@ export default function SEOPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `prospectiq-seo-services-${new Date().toISOString().split("T")[0]}.csv`
+    a.download = `prospectiq-services-${new Date().toISOString().split("T")[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -87,21 +93,21 @@ export default function SEOPage() {
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                 <SearchCheck className="w-6 h-6 text-indigo-500" />
-                Pitch SEO
+                Pitch Services
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {stats.total} businesses tagged for SEO pitching
+                {allBusinesses.length} businesses tagged for service pitches
               </p>
             </div>
             <Button onClick={handleExport} variant="outline" size="sm" className="gap-2" disabled={filtered.length === 0}>
-              <Download className="w-4 h-4" /> Export SEO List ({filtered.length})
+              <Download className="w-4 h-4" /> Export ({filtered.length})
             </Button>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search SEO businesses..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+              <Input placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="sm:w-48"><SelectValue placeholder="All categories" /></SelectTrigger>
@@ -121,18 +127,33 @@ export default function SEOPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={filter === "all" ? "default" : "outline"} className="cursor-pointer" onClick={() => setFilter("all")}>All ({stats.total})</Badge>
-            <Badge variant={filter === "website" ? "default" : "outline"} className="cursor-pointer gap-1" onClick={() => setFilter("website")}><Globe className="w-3 h-3" /> Has Website ({stats.withWebsite})</Badge>
-            <Badge variant={filter === "facebook-only" ? "default" : "outline"} className="cursor-pointer gap-1" onClick={() => setFilter("facebook-only")}><Facebook className="w-3 h-3" /> Facebook Only ({stats.facebookOnly})</Badge>
-            <Badge variant={filter === "no-presence" ? "destructive" : "outline"} className="cursor-pointer gap-1" onClick={() => setFilter("no-presence")}><XCircle className="w-3 h-3" /> No Presence ({stats.noPresence})</Badge>
-            <Badge variant={filter === "analyzed" ? "default" : "outline"} className="cursor-pointer gap-1" onClick={() => setFilter("analyzed")}><ScanSearch className="w-3 h-3" /> Analyzed ({stats.analyzed})</Badge>
+            <Badge variant={serviceFilter === "all" ? "default" : "outline"} className="cursor-pointer" onClick={() => setServiceFilter("all")}>
+              All ({allBusinesses.length})
+            </Badge>
+            {SERVICE_TAGS.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant={serviceFilter === tag.id ? "default" : "outline"}
+                className="cursor-pointer gap-1"
+                onClick={() => setServiceFilter(tag.id)}
+              >
+                {tag.label} ({tagCounts[tag.id] || 0})
+              </Badge>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={filter === "all" ? "default" : "outline"} className="cursor-pointer" onClick={() => setFilter("all")}>All Presence</Badge>
+            <Badge variant={filter === "website" ? "default" : "outline"} className="cursor-pointer gap-1" onClick={() => setFilter("website")}><Globe className="w-3 h-3" /> Has Website</Badge>
+            <Badge variant={filter === "facebook-only" ? "default" : "outline"} className="cursor-pointer gap-1" onClick={() => setFilter("facebook-only")}><Facebook className="w-3 h-3" /> Facebook Only</Badge>
+            <Badge variant={filter === "no-presence" ? "destructive" : "outline"} className="cursor-pointer gap-1" onClick={() => setFilter("no-presence")}><XCircle className="w-3 h-3" /> No Presence</Badge>
           </div>
 
           {allBusinesses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <SearchCheck className="w-12 h-12 text-muted-foreground/40 mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-1">No businesses tagged yet</h3>
-              <p className="text-sm text-muted-foreground max-w-md">Click the "Pitch SEO" pill on any business card to tag it.</p>
+              <p className="text-sm text-muted-foreground max-w-md">Tag businesses with Pitch Design, Pitch SEO, or Pitch AI Chatbot to see them here.</p>
             </div>
           ) : (
             <>

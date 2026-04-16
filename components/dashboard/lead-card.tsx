@@ -29,7 +29,7 @@ import {
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, toggleSEO, type PipelineStage } from "@/lib/storage"
+import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, toggleServiceTag, SERVICE_TAGS, type PipelineStage } from "@/lib/storage"
 import { addToBlocklist } from "@/lib/blocklist"
 
 const presenceConfig = {
@@ -40,7 +40,7 @@ const presenceConfig = {
 }
 
 interface LeadCardProps {
-  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage; needsSEO?: boolean }
+  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage; needsSEO?: boolean; serviceTags?: string[] }
   onProspectChange?: () => void
   onBlock?: (name: string) => void
 }
@@ -55,7 +55,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [notes, setNotes] = useState(business.notes || "")
   const [showNotes, setShowNotes] = useState(!!business.notes)
   const [stage, setStage] = useState<PipelineStage>(business.pipelineStage || "none")
-  const [needsSEO, setNeedsSEO] = useState(business.needsSEO || false)
+  const [serviceTags, setServiceTags] = useState<string[]>(business.serviceTags || (business.needsSEO ? ["pitch-seo"] : []))
 
   const presence = presenceConfig[business.webPresence]
   const PresenceIcon = presence.icon
@@ -357,21 +357,23 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
               <Flame className={`w-3.5 h-3.5 ${isPriority ? "fill-white" : ""}`} />
               Priority
             </button>
-            <button
-              onClick={() => {
-                const newVal = toggleSEO(business.id)
-                setNeedsSEO(newVal)
-                onProspectChange?.()
-              }}
-              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors ${
-                needsSEO
-                  ? "bg-indigo-500 text-white"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              <SearchCheck className="w-3.5 h-3.5" />
-              Pitch SEO
-            </button>
+            {SERVICE_TAGS.map((tag) => (
+              <button
+                key={tag.id}
+                onClick={() => {
+                  const newTags = toggleServiceTag(business.id, tag.id)
+                  setServiceTags(newTags)
+                  onProspectChange?.()
+                }}
+                className={`flex-1 flex items-center justify-center gap-1 text-xs font-medium px-1 py-1.5 rounded-md transition-colors ${
+                  serviceTags.includes(tag.id)
+                    ? `${tag.color} text-white`
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {tag.label}
+              </button>
+            ))}
           </div>
 
           {/* Pipeline Stage */}

@@ -22,6 +22,7 @@ export interface SavedBusiness extends Business {
   notes?: string
   pipelineStage?: PipelineStage
   needsSEO?: boolean
+  serviceTags?: string[]
 }
 
 export interface SearchReport {
@@ -208,6 +209,7 @@ export function saveBusinesses(
         notes: prev.notes,
         pipelineStage: prev.pipelineStage,
         needsSEO: prev.needsSEO,
+        serviceTags: prev.serviceTags,
         savedAt: prev.savedAt,
         searchQuery: prev.searchQuery,
       })
@@ -313,6 +315,32 @@ export function setPipelineStage(businessId: string, stage: PipelineStage): void
   }
 }
 
+export const SERVICE_TAGS = [
+  { id: "pitch-design", label: "Pitch Design", color: "bg-pink-500" },
+  { id: "pitch-seo", label: "Pitch SEO", color: "bg-indigo-500" },
+  { id: "pitch-chatbot", label: "Pitch AI Chatbot", color: "bg-cyan-500" },
+] as const
+
+export type ServiceTagId = typeof SERVICE_TAGS[number]["id"]
+
+export function toggleServiceTag(businessId: string, tagId: string): string[] {
+  const businesses = getSavedBusinesses()
+  const idx = businesses.findIndex((b) => b.id === businessId)
+  if (idx !== -1) {
+    const tags = businesses[idx].serviceTags || []
+    if (tags.includes(tagId)) {
+      businesses[idx].serviceTags = tags.filter((t) => t !== tagId)
+    } else {
+      businesses[idx].serviceTags = [...tags, tagId]
+    }
+    // Migrate old needsSEO flag
+    if (tagId === "pitch-seo") businesses[idx].needsSEO = businesses[idx].serviceTags!.includes("pitch-seo")
+    _saveBusinessList(businesses)
+    return businesses[idx].serviceTags!
+  }
+  return []
+}
+
 export function toggleSEO(businessId: string): boolean {
   const businesses = getSavedBusinesses()
   const idx = businesses.findIndex((b) => b.id === businessId)
@@ -354,7 +382,9 @@ export function getStats() {
     prospects: businesses.filter((b) => b.isProspect).length,
     priority: businesses.filter((b) => b.isPriority).length,
     dismissed: businesses.filter((b) => b.isDismissed).length,
-    needsSEO: businesses.filter((b) => b.needsSEO).length,
+    needsSEO: businesses.filter((b) => b.needsSEO || b.serviceTags?.includes("pitch-seo")).length,
+    pitchDesign: businesses.filter((b) => b.serviceTags?.includes("pitch-design")).length,
+    pitchChatbot: businesses.filter((b) => b.serviceTags?.includes("pitch-chatbot")).length,
   }
 }
 
@@ -374,7 +404,7 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     "Name", "Category", "Address", "Phone", "Website", "Facebook",
     "Web Presence", "Rating", "Reviews", "Source", "Platform",
     "Estimated Age", "Mobile Friendly", "Has SSL", "Yellow Pages Site",
-    "Analysis Summary", "Search Query", "Notes", "Status", "Pipeline Stage", "Needs SEO", "Saved At",
+    "Analysis Summary", "Search Query", "Notes", "Status", "Pipeline Stage", "Service Tags", "Saved At",
   ]
 
   const rows = businesses.map((b) => [
@@ -388,7 +418,7 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     b.analysis?.summary || "", b.searchQuery || "", b.notes || "",
     b.isProspect ? "Prospect" : b.isPriority ? "Priority" : b.isDismissed ? "Dismissed" : "",
     b.pipelineStage || "",
-    b.needsSEO ? "Yes" : "No",
+    (b.serviceTags || []).join("; "),
     b.savedAt || "",
   ])
 
