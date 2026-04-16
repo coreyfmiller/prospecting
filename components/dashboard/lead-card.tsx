@@ -323,40 +323,45 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
               </button>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          {/* Status Actions */}
+          <div className="grid grid-cols-3 gap-1.5">
             <button
               onClick={handleToggleDismiss}
-              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors ${
+              className={`flex items-center justify-center gap-1 text-xs font-medium py-1.5 rounded-md transition-colors ${
                 isDismissed
                   ? "bg-destructive text-destructive-foreground"
                   : "bg-muted/50 text-muted-foreground hover:bg-muted"
               }`}
             >
-              <Ban className="w-3.5 h-3.5" />
+              <Ban className="w-3 h-3" />
               Dismiss
             </button>
             <button
               onClick={handleToggleProspect}
-              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors ${
+              className={`flex items-center justify-center gap-1 text-xs font-medium py-1.5 rounded-md transition-colors ${
                 isProspect
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted/50 text-muted-foreground hover:bg-muted"
               }`}
             >
-              <Star className={`w-3.5 h-3.5 ${isProspect ? "fill-primary-foreground" : ""}`} />
+              <Star className={`w-3 h-3 ${isProspect ? "fill-primary-foreground" : ""}`} />
               Prospect
             </button>
             <button
               onClick={handleTogglePriority}
-              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors ${
+              className={`flex items-center justify-center gap-1 text-xs font-medium py-1.5 rounded-md transition-colors ${
                 isPriority
                   ? "bg-amber-500 text-white"
                   : "bg-muted/50 text-muted-foreground hover:bg-muted"
               }`}
             >
-              <Flame className={`w-3.5 h-3.5 ${isPriority ? "fill-white" : ""}`} />
+              <Flame className={`w-3 h-3 ${isPriority ? "fill-white" : ""}`} />
               Priority
             </button>
+          </div>
+
+          {/* Service Tags */}
+          <div className="grid grid-cols-3 gap-1.5">
             {SERVICE_TAGS.map((tag) => (
               <button
                 key={tag.id}
@@ -365,7 +370,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
                   setServiceTags(newTags)
                   onProspectChange?.()
                 }}
-                className={`flex-1 flex items-center justify-center gap-1 text-xs font-medium px-1 py-1.5 rounded-md transition-colors ${
+                className={`text-xs font-medium py-1.5 rounded-md transition-colors ${
                   serviceTags.includes(tag.id)
                     ? `${tag.color} text-white`
                     : "bg-muted/50 text-muted-foreground hover:bg-muted"
@@ -377,7 +382,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
           </div>
 
           {/* Pipeline Stage */}
-          <div className="flex items-center gap-1.5">
+          <div className="grid grid-cols-5 gap-1">
             {(["contacted", "meeting", "proposal", "won", "lost"] as PipelineStage[]).map((s) => {
               const config: Record<string, { label: string; color: string; active: string }> = {
                 contacted: { label: "Contacted", color: "bg-muted/50 text-muted-foreground", active: "bg-blue-500 text-white" },
@@ -395,7 +400,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
                     setStage(newStage)
                     setPipelineStage(business.id, newStage)
                   }}
-                  className={`flex-1 text-xs px-2 py-1 rounded-full transition-colors ${stage === s ? c.active : c.color} hover:opacity-80`}
+                  className={`text-xs py-1 rounded-full transition-colors ${stage === s ? c.active : c.color} hover:opacity-80`}
                 >
                   {c.label}
                 </button>
