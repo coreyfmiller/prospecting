@@ -41,6 +41,7 @@ export default function DatabasePage() {
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [stats, setStats] = useState(getStats())
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [sortBy, setSortBy] = useState("name")
 
   useEffect(() => {
     const data = getSavedBusinesses()
@@ -60,8 +61,7 @@ export default function DatabasePage() {
   }, [businesses])
 
   const filtered = useMemo(() => {
-    return businesses.filter((b) => {
-      // Text search
+    let result = businesses.filter((b) => {
       if (searchTerm) {
         const term = searchTerm.toLowerCase()
         const match =
@@ -71,11 +71,7 @@ export default function DatabasePage() {
           (b.phone?.includes(term))
         if (!match) return false
       }
-
-      // Category filter
       if (categoryFilter !== "all" && b.category !== categoryFilter) return false
-
-      // Presence filter
       if (filter === "website") return b.webPresence === "website"
       if (filter === "facebook-only")
         return b.webPresence === "facebook-only" || b.webPresence === "social-only"
@@ -83,10 +79,18 @@ export default function DatabasePage() {
       if (filter === "analyzed") return !!b.analysis
       if (filter === "yellow-pages") return !!b.analysis?.isYellowPages
       if (filter === "prospects") return !!b.isProspect
-
       return true
     })
-  }, [businesses, filter, searchTerm, categoryFilter])
+
+    result.sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name)
+      if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0)
+      if (sortBy === "date") return new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime()
+      return 0
+    })
+
+    return result
+  }, [businesses, filter, searchTerm, categoryFilter, sortBy])
 
   const handleExport = () => {
     const csv = exportToCSV(filtered)
@@ -157,6 +161,16 @@ export default function DatabasePage() {
                     {cat}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="sm:w-40">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name A-Z</SelectItem>
+                <SelectItem value="rating">Highest Rating</SelectItem>
+                <SelectItem value="date">Newest First</SelectItem>
               </SelectContent>
             </Select>
           </div>

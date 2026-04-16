@@ -21,6 +21,7 @@ export interface SavedBusiness extends Business {
   isDismissed?: boolean
   notes?: string
   pipelineStage?: PipelineStage
+  needsSEO?: boolean
 }
 
 export interface SearchReport {
@@ -202,8 +203,11 @@ export function saveBusinesses(
         ...b,
         analysis: prev.analysis,
         isProspect: prev.isProspect,
+        isPriority: prev.isPriority,
         isDismissed: prev.isDismissed,
         notes: prev.notes,
+        pipelineStage: prev.pipelineStage,
+        needsSEO: prev.needsSEO,
         savedAt: prev.savedAt,
         searchQuery: prev.searchQuery,
       })
@@ -309,6 +313,17 @@ export function setPipelineStage(businessId: string, stage: PipelineStage): void
   }
 }
 
+export function toggleSEO(businessId: string): boolean {
+  const businesses = getSavedBusinesses()
+  const idx = businesses.findIndex((b) => b.id === businessId)
+  if (idx !== -1) {
+    businesses[idx].needsSEO = !businesses[idx].needsSEO
+    _saveBusinessList(businesses)
+    return businesses[idx].needsSEO!
+  }
+  return false
+}
+
 // --- Reports ---
 
 export function getReports(): SearchReport[] {
@@ -339,6 +354,7 @@ export function getStats() {
     prospects: businesses.filter((b) => b.isProspect).length,
     priority: businesses.filter((b) => b.isPriority).length,
     dismissed: businesses.filter((b) => b.isDismissed).length,
+    needsSEO: businesses.filter((b) => b.needsSEO).length,
   }
 }
 
@@ -358,7 +374,7 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     "Name", "Category", "Address", "Phone", "Website", "Facebook",
     "Web Presence", "Rating", "Reviews", "Source", "Platform",
     "Estimated Age", "Mobile Friendly", "Has SSL", "Yellow Pages Site",
-    "Analysis Summary", "Search Query", "Notes", "Status", "Pipeline Stage", "Saved At",
+    "Analysis Summary", "Search Query", "Notes", "Status", "Pipeline Stage", "Needs SEO", "Saved At",
   ]
 
   const rows = businesses.map((b) => [
@@ -372,6 +388,7 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     b.analysis?.summary || "", b.searchQuery || "", b.notes || "",
     b.isProspect ? "Prospect" : b.isPriority ? "Priority" : b.isDismissed ? "Dismissed" : "",
     b.pipelineStage || "",
+    b.needsSEO ? "Yes" : "No",
     b.savedAt || "",
   ])
 

@@ -35,6 +35,7 @@ export default function ProspectsPage() {
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
+  const [sortBy, setSortBy] = useState("name")
 
   const loadData = () => {
     const data = getSavedBusinesses().filter((b) => b.isProspect)
@@ -57,7 +58,7 @@ export default function ProspectsPage() {
   }), [allBusinesses])
 
   const filtered = useMemo(() => {
-    return allBusinesses.filter((b) => {
+    let result = allBusinesses.filter((b) => {
       if (searchTerm) {
         const term = searchTerm.toLowerCase()
         const match =
@@ -75,7 +76,14 @@ export default function ProspectsPage() {
       if (filter === "analyzed") return !!b.analysis
       return true
     })
-  }, [allBusinesses, filter, searchTerm, categoryFilter])
+    result.sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name)
+      if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0)
+      if (sortBy === "date") return new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime()
+      return 0
+    })
+    return result
+  }, [allBusinesses, filter, searchTerm, categoryFilter, sortBy])
 
   const handleExport = () => {
     const csv = exportToCSV(filtered)
@@ -131,6 +139,14 @@ export default function ProspectsPage() {
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="sm:w-40"><SelectValue placeholder="Sort by" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name A-Z</SelectItem>
+                <SelectItem value="rating">Highest Rating</SelectItem>
+                <SelectItem value="date">Newest First</SelectItem>
               </SelectContent>
             </Select>
           </div>

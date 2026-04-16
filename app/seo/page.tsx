@@ -9,12 +9,12 @@ import { Badge } from "@/components/ui/badge"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { Search, Globe, XCircle, Facebook, Download, Flame, ScanSearch } from "lucide-react"
+import { Search, Globe, XCircle, Facebook, Download, SearchCheck, ScanSearch } from "lucide-react"
 import { getSavedBusinesses, exportToCSV, type SavedBusiness } from "@/lib/storage"
 
 type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed"
 
-export default function PriorityPage() {
+export default function SEOPage() {
   const [allBusinesses, setAllBusinesses] = useState<SavedBusiness[]>([])
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchTerm, setSearchTerm] = useState("")
@@ -22,7 +22,7 @@ export default function PriorityPage() {
   const [sortBy, setSortBy] = useState("name")
 
   const loadData = () => {
-    setAllBusinesses(getSavedBusinesses().filter((b) => b.isPriority))
+    setAllBusinesses(getSavedBusinesses().filter((b) => b.needsSEO))
   }
   useEffect(() => { loadData() }, [])
 
@@ -56,12 +56,14 @@ export default function PriorityPage() {
       if (filter === "analyzed") return !!b.analysis
       return true
     })
+
     result.sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name)
       if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0)
       if (sortBy === "date") return new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime()
       return 0
     })
+
     return result
   }, [allBusinesses, filter, searchTerm, categoryFilter, sortBy])
 
@@ -71,7 +73,7 @@ export default function PriorityPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `prospectiq-priority-${new Date().toISOString().split("T")[0]}.csv`
+    a.download = `prospectiq-seo-services-${new Date().toISOString().split("T")[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -84,25 +86,25 @@ export default function PriorityPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Flame className="w-6 h-6 text-amber-500 fill-amber-500" />
-                Priority
+                <SearchCheck className="w-6 h-6 text-indigo-500" />
+                SEO Services
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {stats.total} high-priority businesses to reach out to first
+                {stats.total} businesses tagged for SEO services
               </p>
             </div>
             <Button onClick={handleExport} variant="outline" size="sm" className="gap-2" disabled={filtered.length === 0}>
-              <Download className="w-4 h-4" /> Export Priority ({filtered.length})
+              <Download className="w-4 h-4" /> Export SEO List ({filtered.length})
             </Button>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search priority businesses..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+              <Input placeholder="Search SEO businesses..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="sm:w-56"><SelectValue placeholder="All categories" /></SelectTrigger>
+              <SelectTrigger className="sm:w-48"><SelectValue placeholder="All categories" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
                 {categories.map((cat) => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}
@@ -128,18 +130,18 @@ export default function PriorityPage() {
 
           {allBusinesses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Flame className="w-12 h-12 text-muted-foreground/40 mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-1">No priority businesses yet</h3>
-              <p className="text-sm text-muted-foreground max-w-md">Mark your top prospects as Priority to see them here.</p>
+              <SearchCheck className="w-12 h-12 text-muted-foreground/40 mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-1">No SEO businesses tagged yet</h3>
+              <p className="text-sm text-muted-foreground max-w-md">Click the "SEO Services" pill on any business card to tag it for SEO.</p>
             </div>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">Showing {filtered.length} of {allBusinesses.length} priority</p>
+              <p className="text-sm text-muted-foreground">Showing {filtered.length} of {allBusinesses.length}</p>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((b) => (<LeadCard key={b.id} business={b} onProspectChange={loadData} />))}
               </div>
               {filtered.length === 0 && allBusinesses.length > 0 && (
-                <p className="text-center text-muted-foreground py-8">No priority businesses match your filters</p>
+                <p className="text-center text-muted-foreground py-8">No businesses match your filters</p>
               )}
             </>
           )}

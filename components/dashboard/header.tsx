@@ -3,7 +3,7 @@
 import { ThemeToggle } from "./theme-toggle"
 import { ProjectPicker } from "./project-picker"
 import { Button } from "@/components/ui/button"
-import { Zap, Database, Star, Ban, Flame } from "lucide-react"
+import { Zap, Database, Star, Ban, Flame, SearchCheck } from "lucide-react"
 import Link from "next/link"
 
 export function DashboardHeader() {
@@ -36,6 +36,11 @@ export function DashboardHeader() {
           <Link href="/dismissed">
             <Button variant="ghost" size="sm" className="gap-1.5">
               <Ban className="w-4 h-4" /> Dismissed
+            </Button>
+          </Link>
+          <Link href="/seo">
+            <Button variant="ghost" size="sm" className="gap-1.5">
+              <SearchCheck className="w-4 h-4" /> SEO
             </Button>
           </Link>
         </nav>

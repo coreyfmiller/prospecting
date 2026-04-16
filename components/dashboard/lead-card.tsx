@@ -25,10 +25,11 @@ import {
   Ban,
   EyeOff,
   Flame,
+  SearchCheck,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, type PipelineStage } from "@/lib/storage"
+import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, toggleSEO, type PipelineStage } from "@/lib/storage"
 import { addToBlocklist } from "@/lib/blocklist"
 
 const presenceConfig = {
@@ -39,7 +40,7 @@ const presenceConfig = {
 }
 
 interface LeadCardProps {
-  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage }
+  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage; needsSEO?: boolean }
   onProspectChange?: () => void
   onBlock?: (name: string) => void
 }
@@ -54,6 +55,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [notes, setNotes] = useState(business.notes || "")
   const [showNotes, setShowNotes] = useState(!!business.notes)
   const [stage, setStage] = useState<PipelineStage>(business.pipelineStage || "none")
+  const [needsSEO, setNeedsSEO] = useState(business.needsSEO || false)
 
   const presence = presenceConfig[business.webPresence]
   const PresenceIcon = presence.icon
@@ -386,6 +388,25 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
             })}
           </div>
         )}
+
+        {/* SEO Services Tag */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              const newVal = toggleSEO(business.id)
+              setNeedsSEO(newVal)
+              onProspectChange?.()
+            }}
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-colors ${
+              needsSEO
+                ? "bg-indigo-500 text-white"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <SearchCheck className="w-3.5 h-3.5" />
+            SEO Services
+          </button>
+        </div>
 
         {showNotes && (
           <div className="pt-2">
