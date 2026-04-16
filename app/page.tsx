@@ -25,9 +25,10 @@ import {
   Trash2,
   ShieldCheck,
   ScanSearch,
+  Ban,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
-import { saveBusinesses, ensureProject } from "@/lib/storage"
+import { saveBusinesses, ensureProject, getSavedBusinesses } from "@/lib/storage"
 import { isBlocked, isBlockChainsEnabled, setBlockChainsEnabled } from "@/lib/blocklist"
 
 const CATEGORIES = [
@@ -70,6 +71,7 @@ export default function Dashboard() {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [blockChains, setBlockChains] = useState(true)
   const [blockedCount, setBlockedCount] = useState(0)
+  const [hideDismissed, setHideDismissed] = useState(true)
   const [analyzingAll, setAnalyzingAll] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 })
 
@@ -171,7 +173,13 @@ export default function Dashboard() {
     }
   }
 
+  // Get dismissed IDs to filter them out
+  const dismissedIds = new Set(
+    hideDismissed ? getSavedBusinesses().filter((b) => b.isDismissed).map((b) => b.id) : []
+  )
+
   const filtered = businesses.filter((b) => {
+    if (hideDismissed && dismissedIds.has(b.id)) return false
     if (filter === "website") return b.webPresence === "website"
     if (filter === "facebook-only") return b.webPresence === "facebook-only" || b.webPresence === "social-only"
     if (filter === "no-presence") return b.webPresence === "none"
@@ -247,6 +255,17 @@ export default function Dashboard() {
               >
                 <ShieldCheck className="w-4 h-4" />
                 {blockChains ? "Hiding big chains" : "Showing all businesses"}
+              </button>
+              <button
+                onClick={() => setHideDismissed(!hideDismissed)}
+                className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border transition-colors ${
+                  hideDismissed
+                    ? "bg-primary/10 border-primary/30 text-primary"
+                    : "bg-muted/30 border-border text-muted-foreground"
+                }`}
+              >
+                <Ban className="w-4 h-4" />
+                {hideDismissed ? "Hiding dismissed" : "Showing dismissed"}
               </button>
             </div>
           </div>

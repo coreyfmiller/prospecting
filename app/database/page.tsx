@@ -23,6 +23,7 @@ import {
   Database,
   ScanSearch,
   Star,
+  Loader2,
 } from "lucide-react"
 import {
   getSavedBusinesses,
@@ -42,6 +43,32 @@ export default function DatabasePage() {
   const [stats, setStats] = useState(getStats())
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [sortBy, setSortBy] = useState("name")
+  const [analyzingAll, setAnalyzingAll] = useState(false)
+  const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 })
+
+  const handleAnalyzeAll = async () => {
+    const toAnalyze = filtered.filter((b) => b.webPresence === "website" && b.website && !b.analysis)
+    if (toAnalyze.length === 0) return
+    setAnalyzingAll(true)
+    setAnalyzeProgress({ done: 0, total: toAnalyze.length })
+    const { saveAnalysis } = await import("@/lib/storage")
+    for (let i = 0; i < toAnalyze.length; i++) {
+      try {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: toAnalyze[i].website }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          saveAnalysis(toAnalyze[i].id, data)
+        }
+      } catch {}
+      setAnalyzeProgress({ done: i + 1, total: toAnalyze.length })
+    }
+    setAnalyzingAll(false)
+    refreshData()
+  }
 
   useEffect(() => {
     const data = getSavedBusinesses()
@@ -128,6 +155,13 @@ export default function DatabasePage() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button onClick={handleAnalyzeAll} variant="outline" size="sm" className="gap-2" disabled={analyzingAll}>
+                {analyzingAll ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> {analyzeProgress.done}/{analyzeProgress.total}</>
+                ) : (
+                  <><ScanSearch className="w-4 h-4" /> Analyze All</>
+                )}
+              </Button>
               <Button onClick={handleExport} variant="outline" size="sm" className="gap-2" disabled={filtered.length === 0}>
                 <Download className="w-4 h-4" />
                 Export CSV ({filtered.length})
