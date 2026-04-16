@@ -40,7 +40,7 @@ export function DashboardHeader() {
           </Link>
           <Link href="/seo">
             <Button variant="ghost" size="sm" className="gap-1.5">
-              <SearchCheck className="w-4 h-4" /> SEO
+              <SearchCheck className="w-4 h-4" /> Pitch SEO
             </Button>
           </Link>
         </nav>

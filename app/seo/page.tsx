@@ -87,10 +87,10 @@ export default function SEOPage() {
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                 <SearchCheck className="w-6 h-6 text-indigo-500" />
-                SEO Services
+                Pitch SEO
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {stats.total} businesses tagged for SEO services
+                {stats.total} businesses tagged for SEO pitching
               </p>
             </div>
             <Button onClick={handleExport} variant="outline" size="sm" className="gap-2" disabled={filtered.length === 0}>
@@ -131,8 +131,8 @@ export default function SEOPage() {
           {allBusinesses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <SearchCheck className="w-12 h-12 text-muted-foreground/40 mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-1">No SEO businesses tagged yet</h3>
-              <p className="text-sm text-muted-foreground max-w-md">Click the "SEO Services" pill on any business card to tag it for SEO.</p>
+              <h3 className="text-lg font-medium text-foreground mb-1">No businesses tagged yet</h3>
+              <p className="text-sm text-muted-foreground max-w-md">Click the "Pitch SEO" pill on any business card to tag it.</p>
             </div>
           ) : (
             <>
