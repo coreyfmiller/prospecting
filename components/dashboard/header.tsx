@@ -23,14 +23,14 @@ export function DashboardHeader() {
               <Database className="w-4 h-4" /> All
             </Button>
           </Link>
-          <Link href="/prospects">
-            <Button variant="ghost" size="sm" className="gap-1.5">
-              <Star className="w-4 h-4" /> Prospects
-            </Button>
-          </Link>
           <Link href="/priority">
             <Button variant="ghost" size="sm" className="gap-1.5">
               <Flame className="w-4 h-4" /> Priority
+            </Button>
+          </Link>
+          <Link href="/prospects">
+            <Button variant="ghost" size="sm" className="gap-1.5">
+              <Star className="w-4 h-4" /> Prospects
             </Button>
           </Link>
           <Link href="/dismissed">
