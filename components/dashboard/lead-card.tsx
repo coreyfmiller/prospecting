@@ -357,12 +357,25 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
               <Flame className={`w-3.5 h-3.5 ${isPriority ? "fill-white" : ""}`} />
               Priority
             </button>
+            <button
+              onClick={() => {
+                const newVal = toggleSEO(business.id)
+                setNeedsSEO(newVal)
+                onProspectChange?.()
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors ${
+                needsSEO
+                  ? "bg-indigo-500 text-white"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <SearchCheck className="w-3.5 h-3.5" />
+              SEO
+            </button>
           </div>
-        </div>
 
-        {/* Pipeline Stage */}
-        {(isProspect || isPriority) && (
-          <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Pipeline Stage */}
+          <div className="flex items-center gap-1.5">
             {(["contacted", "meeting", "proposal", "won", "lost"] as PipelineStage[]).map((s) => {
               const config: Record<string, { label: string; color: string; active: string }> = {
                 contacted: { label: "Contacted", color: "bg-muted/50 text-muted-foreground", active: "bg-blue-500 text-white" },
@@ -380,32 +393,13 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
                     setStage(newStage)
                     setPipelineStage(business.id, newStage)
                   }}
-                  className={`text-xs px-2 py-1 rounded-full transition-colors ${stage === s ? c.active : c.color} hover:opacity-80`}
+                  className={`flex-1 text-xs px-2 py-1 rounded-full transition-colors ${stage === s ? c.active : c.color} hover:opacity-80`}
                 >
                   {c.label}
                 </button>
               )
             })}
           </div>
-        )}
-
-        {/* SEO Services Tag */}
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => {
-              const newVal = toggleSEO(business.id)
-              setNeedsSEO(newVal)
-              onProspectChange?.()
-            }}
-            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-colors ${
-              needsSEO
-                ? "bg-indigo-500 text-white"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <SearchCheck className="w-3.5 h-3.5" />
-            SEO Services
-          </button>
         </div>
 
         {showNotes && (
