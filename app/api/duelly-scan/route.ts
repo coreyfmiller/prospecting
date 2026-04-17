@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
+export const maxDuration = 180
+
 export interface DuellyScanResult {
   url: string
   seoScore: number
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
         "x-api-key": apiKey,
       },
       body: JSON.stringify({ url }),
-      signal: AbortSignal.timeout(60000),
+      signal: AbortSignal.timeout(180000),
     })
 
     if (!response.ok) {
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Duelly proxy error:", error)
     if (error.name === "TimeoutError") {
-      return NextResponse.json({ error: "Scan timed out (60s)" }, { status: 504 })
+      return NextResponse.json({ error: "Scan timed out (3min)" }, { status: 504 })
     }
     return NextResponse.json({ error: "Duelly scan failed" }, { status: 500 })
   }
