@@ -167,45 +167,37 @@ export default function Dashboard() {
       )
       setSaveInfo(`Saved ${newCount} new, updated ${updatedCount} existing${blocked > 0 ? `, ${blocked} chains filtered` : ""}`)
 
-      // Save audit using Serper for real Google Maps rankings
+      // Save audit from Google Places results
       const searchQuery = category && category !== "all"
         ? `${category} in ${location.trim()}`
         : `businesses in ${location.trim()}`
       try {
-        ensureProject() // Make sure project exists before saving audit
-        const serperRes = await fetch("/api/serper-search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: searchQuery, location: location.trim() }),
+        ensureProject()
+        const auditResults: AuditResult[] = unblocked.map((b: Business, idx: number) => ({
+          businessId: b.id,
+          name: b.name,
+          address: b.address,
+          phone: b.phone,
+          website: b.website,
+          hasWebsite: b.hasWebsite,
+          webPresence: b.webPresence,
+          position: idx + 1,
+          rating: b.rating,
+          reviewCount: b.reviewCount,
+          category: b.category,
+          googleMapsUri: b.googleMapsUri,
+        }))
+        saveAudit({
+          id: crypto.randomUUID(),
+          query: searchQuery,
+          location: location.trim(),
+          category: category || "All categories",
+          date: new Date().toISOString(),
+          results: auditResults,
         })
-        if (serperRes.ok) {
-          const serperData = await serperRes.json()
-          const auditResults: AuditResult[] = (serperData.businesses || []).map((b: any) => ({
-            businessId: b.placeId || crypto.randomUUID(),
-            name: b.name,
-            address: b.address,
-            phone: b.phone,
-            website: b.website,
-            hasWebsite: b.hasWebsite,
-            webPresence: b.hasWebsite ? "website" : "none",
-            position: b.position,
-            rating: b.rating,
-            reviewCount: b.reviewCount,
-            category: b.type,
-          }))
-          saveAudit({
-            id: crypto.randomUUID(),
-            query: searchQuery,
-            location: location.trim(),
-            category: category || "All categories",
-            date: new Date().toISOString(),
-            results: auditResults,
-          })
-          setSaveInfo((prev) => (prev || "") + ` · Audit saved (${auditResults.length} ranked)`)
-        }
+        setSaveInfo((prev) => (prev || "") + ` · Audit saved (${auditResults.length} businesses)`)
       } catch (e) {
-        console.error("Serper audit save failed:", e)
-        setSaveInfo((prev) => (prev || "") + " · Audit failed to save")
+        console.error("Audit save failed:", e)
       }
     } catch (err: any) {
       setError(err.message)

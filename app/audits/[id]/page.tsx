@@ -20,7 +20,7 @@ export default function AuditDetailPage() {
   const [scanning, setScanning] = useState<string | null>(null)
   const [batchScanning, setBatchScanning] = useState(false)
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 })
-  const [sortBy, setSortBy] = useState<"position" | "seo" | "geo" | "da">("position")
+  const [sortBy, setSortBy] = useState<"name" | "seo" | "geo" | "da">("name")
 
   useEffect(() => {
     const a = getAudit(params.id as string)
@@ -75,9 +75,9 @@ export default function AuditDetailPage() {
 
   const handleExport = () => {
     if (!audit) return
-    const headers = ["Position", "Name", "Address", "Phone", "Website", "Web Presence", "Rating", "SEO Score", "GEO Score", "DA", "Critical Issues"]
+    const headers = ["Name", "Address", "Phone", "Website", "Web Presence", "Rating", "SEO Score", "GEO Score", "DA", "Critical Issues"]
     const rows = getSorted().map((r) => [
-      r.position.toString(), r.name, r.address, r.phone || "", r.website || "",
+      r.name, r.address, r.phone || "", r.website || "",
       r.webPresence, r.rating?.toString() || "",
       r.duellyScan?.seoScore?.toString() || "", r.duellyScan?.geoScore?.toString() || "",
       r.duellyScan?.domainAuthority?.toString() || "",
@@ -97,7 +97,7 @@ export default function AuditDetailPage() {
   const getSorted = () => {
     if (!audit) return []
     const results = [...audit.results]
-    if (sortBy === "position") return results.sort((a, b) => a.position - b.position)
+    if (sortBy === "name") return results.sort((a, b) => a.name.localeCompare(b.name))
     if (sortBy === "seo") return results.sort((a, b) => (a.duellyScan?.seoScore ?? 999) - (b.duellyScan?.seoScore ?? 999))
     if (sortBy === "geo") return results.sort((a, b) => (a.duellyScan?.geoScore ?? 999) - (b.duellyScan?.geoScore ?? 999))
     if (sortBy === "da") return results.sort((a, b) => (a.duellyScan?.domainAuthority ?? 999) - (b.duellyScan?.domainAuthority ?? 999))
@@ -137,7 +137,7 @@ export default function AuditDetailPage() {
               </Link>
               <h1 className="text-xl font-bold text-foreground">"{audit.query}"</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {audit.results.length} results · {websiteCount} with websites · {scannedCount} scanned · {new Date(audit.date).toLocaleDateString()}
+                {audit.results.length} competitors · {websiteCount} with websites · {scannedCount} scanned · {new Date(audit.date).toLocaleDateString()}
               </p>
             </div>
             <div className="flex gap-2 shrink-0">
@@ -188,9 +188,9 @@ export default function AuditDetailPage() {
                 <TrendingUp className="w-4 h-4" /> Duelly All
               </Button>
               <div className="ml-auto flex gap-1">
-              {(["position", "seo", "geo", "da"] as const).map((s) => (
+              {(["name", "seo", "geo", "da"] as const).map((s) => (
                 <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
-                  {s === "position" ? "#" : s.toUpperCase()}
+                  {s === "name" ? "A-Z" : s.toUpperCase()}
                 </Button>
               ))}
             </div>
@@ -203,11 +203,6 @@ export default function AuditDetailPage() {
               <Card key={r.businessId} className="overflow-hidden">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
-                    {/* Position */}
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                      <span className="text-sm font-bold text-foreground">#{r.position}</span>
-                    </div>
-
                     {/* Business info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -279,7 +274,7 @@ export default function AuditDetailPage() {
 
                   {/* Critical issues */}
                   {r.duellyScan?.criticalIssues && r.duellyScan.criticalIssues.length > 0 && (
-                    <div className="mt-2 ml-14 flex flex-wrap gap-1">
+                    <div className="mt-2 flex flex-wrap gap-1">
                       {r.duellyScan.criticalIssues.map((issue) => (
                         <Badge key={issue} variant="outline" className="text-xs">{issue}</Badge>
                       ))}
