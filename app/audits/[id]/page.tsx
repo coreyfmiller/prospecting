@@ -174,9 +174,7 @@ export default function AuditDetailPage() {
           {/* Batch scan buttons */}
           <div className="flex flex-col gap-3 p-4 bg-muted/30 rounded-lg border border-border/50">
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                Duelly.ai
-              </span>
+              <img src="/logo.png" alt="Duelly.ai" className="h-6" />
               <span className="text-sm text-muted-foreground">Competitive Analysis</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
