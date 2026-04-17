@@ -10,6 +10,7 @@ export interface SiteAnalysis {
   technologies: string[]
   flags: string[]
   summary: string
+  emails: string[]
 }
 
 const PLATFORM_SIGNATURES: Record<string, RegExp[]> = {
@@ -105,6 +106,7 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
       technologies,
       flags,
       summary: "Could not reach this website to analyze it.",
+      emails: [],
     }
   }
 
@@ -206,7 +208,10 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
     else estimatedAge = `~${age} years old (est. ${oldestSignal})`
   }
 
-  // Build summary with Perplexity if available
+  // Extract emails from HTML
+  const emails = extractEmails(html)
+
+  // Build summary
   const summary = buildSummary({
     platform,
     estimatedAge,
@@ -228,7 +233,39 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
     technologies,
     flags,
     summary,
+    emails,
   }
+}
+
+function extractEmails(html: string): string[] {
+  const emailSet = new Set<string>()
+
+  // Match mailto: links
+  const mailtoMatches = html.match(/mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)
+  if (mailtoMatches) {
+    for (const m of mailtoMatches) {
+      const email = m.replace(/^mailto:/i, "").toLowerCase()
+      emailSet.add(email)
+    }
+  }
+
+  // Match email patterns in text
+  const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g
+  const textMatches = html.match(emailRegex)
+  if (textMatches) {
+    for (const email of textMatches) {
+      const lower = email.toLowerCase()
+      // Filter out common false positives
+      if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".gif") ||
+          lower.endsWith(".svg") || lower.endsWith(".css") || lower.endsWith(".js") ||
+          lower.includes("example.com") || lower.includes("sentry") ||
+          lower.includes("webpack") || lower.includes("@2x") ||
+          lower.includes("wixpress") || lower.includes("schema.org")) continue
+      emailSet.add(lower)
+    }
+  }
+
+  return Array.from(emailSet).slice(0, 5) // Cap at 5 emails
 }
 
 function buildSummary(data: {

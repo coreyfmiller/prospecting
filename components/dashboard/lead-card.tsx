@@ -26,10 +26,12 @@ import {
   EyeOff,
   Flame,
   SearchCheck,
+  Mail,
+  TrendingUp,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, toggleServiceTag, SERVICE_TAGS, type PipelineStage } from "@/lib/storage"
+import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, toggleServiceTag, saveEmails, SERVICE_TAGS, type PipelineStage } from "@/lib/storage"
 import { addToBlocklist } from "@/lib/blocklist"
 
 const presenceConfig = {
@@ -40,7 +42,7 @@ const presenceConfig = {
 }
 
 interface LeadCardProps {
-  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage; needsSEO?: boolean; serviceTags?: string[] }
+  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage; needsSEO?: boolean; serviceTags?: string[]; emails?: string[]; rankings?: { query: string; position: number; date: string }[] }
   onProspectChange?: () => void
   onBlock?: (name: string) => void
 }
@@ -56,6 +58,9 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [showNotes, setShowNotes] = useState(!!business.notes)
   const [stage, setStage] = useState<PipelineStage>(business.pipelineStage || "none")
   const [serviceTags, setServiceTags] = useState<string[]>(business.serviceTags || (business.needsSEO ? ["pitch-seo"] : []))
+  const [emails, setEmails] = useState<string[]>(business.emails || (business.analysis?.emails || []))
+  const [findingEmail, setFindingEmail] = useState(false)
+  const [rankings] = useState(business.rankings || [])
 
   const presence = presenceConfig[business.webPresence]
   const PresenceIcon = presence.icon
@@ -77,11 +82,35 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
       setAnalysis(data)
       // Persist to localStorage
       saveAnalysis(business.id, data)
+      // Save any emails found
+      if (data.emails?.length) {
+        saveEmails(business.id, data.emails)
+        setEmails((prev) => Array.from(new Set([...prev, ...data.emails])))
+      }
     } catch {
       setAnalyzeError("Could not analyze this site")
     } finally {
       setAnalyzing(false)
     }
+  }
+
+  const handleFindEmail = async () => {
+    setFindingEmail(true)
+    try {
+      const res = await fetch("/api/find-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessName: business.name, address: business.address }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.emails?.length) {
+          saveEmails(business.id, data.emails)
+          setEmails((prev) => Array.from(new Set([...prev, ...data.emails])))
+        }
+      }
+    } catch {}
+    setFindingEmail(false)
   }
 
   const handleToggleProspect = () => {
@@ -213,6 +242,46 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
             </div>
           )}
         </div>
+
+        {/* Emails */}
+        {emails.length > 0 && (
+          <div className="space-y-1">
+            {emails.map((email) => (
+              <div key={email} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Mail className="w-4 h-4 shrink-0 text-green-500" />
+                <a href={`mailto:${email}`} className="truncate hover:text-primary transition-colors">{email}</a>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Find Email Button */}
+        {emails.length === 0 && (
+          <Button onClick={handleFindEmail} disabled={findingEmail} variant="outline" size="sm" className="w-full gap-2">
+            {findingEmail ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Finding email...</>
+            ) : (
+              <><Mail className="w-4 h-4" /> Find Email</>
+            )}
+          </Button>
+        )}
+
+        {/* Rankings */}
+        {rankings.length > 0 && (
+          <div className="space-y-1 p-2 bg-muted/30 rounded-md">
+            <p className="text-xs font-medium text-foreground flex items-center gap-1">
+              <TrendingUp className="w-3.5 h-3.5 text-primary" /> Rankings
+            </p>
+            {rankings.map((r) => (
+              <div key={r.query} className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground truncate mr-2">"{r.query}"</span>
+                <Badge variant={r.position <= 3 ? "default" : r.position <= 10 ? "secondary" : "outline"} className="shrink-0">
+                  #{r.position}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Analyze Button */}
         {canAnalyze && !analysis && (

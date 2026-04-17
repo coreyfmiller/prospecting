@@ -12,6 +12,12 @@ export interface Project {
 
 export type PipelineStage = "none" | "contacted" | "meeting" | "proposal" | "won" | "lost"
 
+export interface RankingEntry {
+  query: string
+  position: number
+  date: string
+}
+
 export interface SavedBusiness extends Business {
   savedAt: string
   searchQuery: string
@@ -23,6 +29,8 @@ export interface SavedBusiness extends Business {
   pipelineStage?: PipelineStage
   needsSEO?: boolean
   serviceTags?: string[]
+  emails?: string[]
+  rankings?: RankingEntry[]
 }
 
 export interface SearchReport {
@@ -210,6 +218,8 @@ export function saveBusinesses(
         pipelineStage: prev.pipelineStage,
         needsSEO: prev.needsSEO,
         serviceTags: prev.serviceTags,
+        emails: prev.emails,
+        rankings: prev.rankings,
         savedAt: prev.savedAt,
         searchQuery: prev.searchQuery,
       })
@@ -217,6 +227,20 @@ export function saveBusinesses(
     } else {
       existingMap.set(key, { ...b, savedAt: now, searchQuery })
       newCount++
+    }
+
+    // Save ranking if position is available
+    if (b.searchPosition) {
+      const biz = existingMap.get(key)!
+      const rankings = biz.rankings || []
+      const existingRank = rankings.findIndex((r) => r.query === searchQuery)
+      const entry = { query: searchQuery, position: b.searchPosition, date: now }
+      if (existingRank !== -1) {
+        rankings[existingRank] = entry
+      } else {
+        rankings.push(entry)
+      }
+      biz.rankings = rankings
     }
   }
 
@@ -352,6 +376,35 @@ export function toggleSEO(businessId: string): boolean {
   return false
 }
 
+export function saveEmails(businessId: string, emails: string[]): void {
+  const businesses = getSavedBusinesses()
+  const idx = businesses.findIndex((b) => b.id === businessId)
+  if (idx !== -1) {
+    const existing = businesses[idx].emails || []
+    const merged = Array.from(new Set([...existing, ...emails]))
+    businesses[idx].emails = merged
+    _saveBusinessList(businesses)
+  }
+}
+
+export function addRanking(businessId: string, query: string, position: number): void {
+  const businesses = getSavedBusinesses()
+  const idx = businesses.findIndex((b) => b.id === businessId)
+  if (idx !== -1) {
+    const rankings = businesses[idx].rankings || []
+    // Update existing ranking for same query or add new
+    const existingIdx = rankings.findIndex((r) => r.query === query)
+    const entry: RankingEntry = { query, position, date: new Date().toISOString() }
+    if (existingIdx !== -1) {
+      rankings[existingIdx] = entry
+    } else {
+      rankings.push(entry)
+    }
+    businesses[idx].rankings = rankings
+    _saveBusinessList(businesses)
+  }
+}
+
 // --- Reports ---
 
 export function getReports(): SearchReport[] {
@@ -404,7 +457,7 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     "Name", "Category", "Address", "Phone", "Website", "Facebook",
     "Web Presence", "Rating", "Reviews", "Source", "Platform",
     "Estimated Age", "Mobile Friendly", "Has SSL", "Yellow Pages Site",
-    "Analysis Summary", "Search Query", "Notes", "Status", "Pipeline Stage", "Service Tags", "Saved At",
+    "Analysis Summary", "Search Query", "Notes", "Status", "Pipeline Stage", "Service Tags", "Emails", "Rankings", "Saved At",
   ]
 
   const rows = businesses.map((b) => [
@@ -419,6 +472,8 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
     b.isProspect ? "Prospect" : b.isPriority ? "Priority" : b.isDismissed ? "Dismissed" : "",
     b.pipelineStage || "",
     (b.serviceTags || []).join("; "),
+    (b.emails || []).join("; "),
+    (b.rankings || []).map((r) => `#${r.position} for "${r.query}"`).join("; "),
     b.savedAt || "",
   ])
 

@@ -17,6 +17,7 @@ export interface Business {
   category?: string
   googleMapsUri?: string
   source: "google" | "perplexity" | "both"
+  searchPosition?: number
 }
 
 const SOCIAL_PATTERNS: Record<string, RegExp> = {
@@ -129,11 +130,12 @@ async function searchGooglePlaces(query: string): Promise<Business[]> {
     const data = await response.json()
     if (!data.places || data.places.length === 0) break
 
-    const mapped = data.places.map((place: any) => {
+    const mapped = data.places.map((place: any, index: number) => {
       const website = place.websiteUri || undefined
       const facebook = website && isFacebookUrl(website) ? website : undefined
       const actualWebsite = website && !isSocialUrl(website) ? website : undefined
       const socialUrl = website && isSocialUrl(website) && !isFacebookUrl(website) ? website : undefined
+      const position = page * 20 + index + 1
 
       return {
         id: place.id || crypto.randomUUID(),
@@ -150,6 +152,7 @@ async function searchGooglePlaces(query: string): Promise<Business[]> {
         category: place.primaryTypeDisplayName?.text || undefined,
         googleMapsUri: place.googleMapsUri || undefined,
         source: "google" as const,
+        searchPosition: position,
       }
     })
 
