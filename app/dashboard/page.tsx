@@ -4,11 +4,12 @@ import { useState, useEffect } from "react"
 import { DashboardHeader } from "@/components/dashboard/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Globe, XCircle, Facebook, Star, Flame, Ban, SearchCheck,
-  Building2, BarChart3, Paintbrush, Bot, Search as SearchIcon,
+  Building2, BarChart3, Paintbrush, Bot, Search as SearchIcon, Trash2,
 } from "lucide-react"
-import { getSavedBusinesses, getStats, getReports, SERVICE_TAGS, type SavedBusiness } from "@/lib/storage"
+import { getSavedBusinesses, getStats, getReports, clearProjectData, SERVICE_TAGS, type SavedBusiness } from "@/lib/storage"
 import Link from "next/link"
 
 export default function DashboardPage() {
@@ -16,15 +17,15 @@ export default function DashboardPage() {
   const [businesses, setBusinesses] = useState<SavedBusiness[]>([])
   const [recentSearches, setRecentSearches] = useState<{ query: string; date: string; count: number }[]>([])
   const [topCategories, setTopCategories] = useState<{ name: string; count: number }[]>([])
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
-  useEffect(() => {
+  const loadData = () => {
     const s = getStats()
     const b = getSavedBusinesses()
     const r = getReports()
     setStats(s)
     setBusinesses(b)
 
-    // Recent searches (deduplicated)
     const seen = new Set<string>()
     const recent = r.filter((rep) => {
       if (seen.has(rep.searchQuery)) return false
@@ -37,7 +38,6 @@ export default function DashboardPage() {
     }))
     setRecentSearches(recent)
 
-    // Top categories
     const catMap = new Map<string, number>()
     for (const biz of b) {
       if (biz.category) catMap.set(biz.category, (catMap.get(biz.category) || 0) + 1)
@@ -48,7 +48,15 @@ export default function DashboardPage() {
         .slice(0, 8)
         .map(([name, count]) => ({ name, count }))
     )
-  }, [])
+  }
+
+  useEffect(() => { loadData() }, [])
+
+  const handleClear = () => {
+    clearProjectData()
+    setShowClearConfirm(false)
+    loadData()
+  }
 
   if (!stats) return null
 
@@ -76,11 +84,16 @@ export default function DashboardPage() {
       <DashboardHeader />
       <main className="flex-1 p-4 sm:p-6">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <BarChart3 className="w-6 h-6" /> Dashboard
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">Overview of your prospecting pipeline</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <BarChart3 className="w-6 h-6" /> Dashboard
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">Overview of your prospecting pipeline</p>
+            </div>
+            <Button onClick={() => setShowClearConfirm(true)} variant="outline" size="sm" className="gap-2 text-destructive hover:text-destructive">
+              <Trash2 className="w-4 h-4" /> Clear Project Data
+            </Button>
           </div>
 
           {/* Top Stats */}
@@ -245,6 +258,21 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowClearConfirm(false)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-sm mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Clear all project data?</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              This will delete all businesses, prospects, notes, audits, and search history in this project. This cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setShowClearConfirm(false)}>Cancel</Button>
+              <Button variant="destructive" size="sm" onClick={handleClear}>Clear Everything</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
