@@ -172,6 +172,7 @@ export default function Dashboard() {
         ? `${category} in ${location.trim()}`
         : `businesses in ${location.trim()}`
       try {
+        ensureProject() // Make sure project exists before saving audit
         const serperRes = await fetch("/api/serper-search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -200,9 +201,11 @@ export default function Dashboard() {
             date: new Date().toISOString(),
             results: auditResults,
           })
+          setSaveInfo((prev) => (prev || "") + ` · Audit saved (${auditResults.length} ranked)`)
         }
       } catch (e) {
         console.error("Serper audit save failed:", e)
+        setSaveInfo((prev) => (prev || "") + " · Audit failed to save")
       }
     } catch (err: any) {
       setError(err.message)
