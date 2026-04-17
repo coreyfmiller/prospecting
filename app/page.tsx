@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import { saveBusinesses, ensureProject, getSavedBusinesses } from "@/lib/storage"
+import { saveAudit, type Audit, type AuditResult } from "@/lib/storage"
 import { isBlocked, isBlockChainsEnabled, setBlockChainsEnabled } from "@/lib/blocklist"
 
 const CATEGORIES = [
@@ -165,6 +166,33 @@ export default function Dashboard() {
         category
       )
       setSaveInfo(`Saved ${newCount} new, updated ${updatedCount} existing${blocked > 0 ? `, ${blocked} chains filtered` : ""}`)
+
+      // Save as audit
+      const auditResults: AuditResult[] = unblocked.map((b: Business) => ({
+        businessId: b.id,
+        name: b.name,
+        address: b.address,
+        phone: b.phone,
+        website: b.website,
+        hasWebsite: b.hasWebsite,
+        webPresence: b.webPresence,
+        position: b.searchPosition || 0,
+        rating: b.rating,
+        reviewCount: b.reviewCount,
+        category: b.category,
+        googleMapsUri: b.googleMapsUri,
+      }))
+      const searchQuery = category && category !== "all"
+        ? `${category} in ${location.trim()}`
+        : `businesses in ${location.trim()}`
+      saveAudit({
+        id: crypto.randomUUID(),
+        query: searchQuery,
+        location: location.trim(),
+        category: category || "All categories",
+        date: new Date().toISOString(),
+        results: auditResults,
+      })
     } catch (err: any) {
       setError(err.message)
       setBusinesses([])

@@ -4,12 +4,13 @@ import { useState } from "react"
 import { ThemeToggle } from "./theme-toggle"
 import { ProjectPicker } from "./project-picker"
 import { Button } from "@/components/ui/button"
-import { Zap, Database, Star, Ban, Flame, SearchCheck, Menu, X, Search, LayoutDashboard } from "lucide-react"
+import { Zap, Database, Star, Ban, Flame, SearchCheck, Menu, X, Search, LayoutDashboard, ClipboardList } from "lucide-react"
 import Link from "next/link"
 
 const NAV_LINKS = [
   { href: "/", label: "Search", icon: Search },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/audits", label: "Audits", icon: ClipboardList },
   { href: "/database", label: "All Businesses", icon: Database },
   { href: "/priority", label: "Priority", icon: Flame },
   { href: "/prospects", label: "Prospects", icon: Star },

@@ -44,6 +44,31 @@ export interface SearchReport {
   businessCount: number
 }
 
+export interface AuditResult {
+  businessId: string
+  name: string
+  address: string
+  phone?: string
+  website?: string
+  hasWebsite: boolean
+  webPresence: string
+  position: number
+  rating?: number
+  reviewCount?: number
+  category?: string
+  googleMapsUri?: string
+  duellyScan?: DuellyScanResult
+}
+
+export interface Audit {
+  id: string
+  query: string
+  location: string
+  category: string
+  date: string
+  results: AuditResult[]
+}
+
 // --- Keys ---
 
 const PROJECTS_KEY = "prospectiq_projects"
@@ -54,6 +79,9 @@ function businessesKey(projectId: string) {
 }
 function reportsKey(projectId: string) {
   return `prospectiq_p_${projectId}_reports`
+}
+function auditsKey(projectId: string) {
+  return `prospectiq_p_${projectId}_audits`
 }
 
 function normalizeName(name: string): string {
@@ -459,6 +487,46 @@ export function clearProjectData(): void {
   if (!pid) return
   localStorage.removeItem(businessesKey(pid))
   localStorage.removeItem(reportsKey(pid))
+  localStorage.removeItem(auditsKey(pid))
+}
+
+// --- Audits ---
+
+export function getAudits(): Audit[] {
+  if (typeof window === "undefined") return []
+  const pid = getActiveProjectId()
+  if (!pid) return []
+  try {
+    const data = localStorage.getItem(auditsKey(pid))
+    return data ? JSON.parse(data) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveAudit(audit: Audit): void {
+  const pid = getActiveProjectId()
+  if (!pid) return
+  const audits = getAudits()
+  audits.unshift(audit)
+  localStorage.setItem(auditsKey(pid), JSON.stringify(audits.slice(0, 50)))
+}
+
+export function getAudit(auditId: string): Audit | null {
+  return getAudits().find((a) => a.id === auditId) || null
+}
+
+export function updateAuditResult(auditId: string, businessId: string, duellyScan: DuellyScanResult): void {
+  const pid = getActiveProjectId()
+  if (!pid) return
+  const audits = getAudits()
+  const audit = audits.find((a) => a.id === auditId)
+  if (!audit) return
+  const result = audit.results.find((r) => r.businessId === businessId)
+  if (result) {
+    result.duellyScan = duellyScan
+    localStorage.setItem(auditsKey(pid), JSON.stringify(audits))
+  }
 }
 
 // --- CSV Export ---
