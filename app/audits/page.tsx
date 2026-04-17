@@ -5,14 +5,21 @@ import { DashboardHeader } from "@/components/dashboard/header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ClipboardList, Search, Calendar, MapPin, ChevronRight } from "lucide-react"
-import { getAudits, type Audit } from "@/lib/storage"
+import { ClipboardList, Search, Calendar, MapPin, ChevronRight, Trash2 } from "lucide-react"
+import { getAudits, deleteAudit, type Audit } from "@/lib/storage"
 import Link from "next/link"
 
 export default function AuditsPage() {
   const [audits, setAudits] = useState<Audit[]>([])
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   useEffect(() => { setAudits(getAudits()) }, [])
+
+  const handleDelete = (id: string) => {
+    deleteAudit(id)
+    setAudits(getAudits())
+    setDeleteConfirm(null)
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -62,6 +69,15 @@ export default function AuditsPage() {
                           {scanned > 0 && (
                             <Badge variant="default">{scanned} scanned</Badge>
                           )}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setDeleteConfirm(audit.id)
+                            }}
+                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                           <ChevronRight className="w-4 h-4 text-muted-foreground" />
                         </div>
                       </CardContent>
@@ -72,6 +88,21 @@ export default function AuditsPage() {
             </div>
           )}
         </div>
+
+        {deleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setDeleteConfirm(null)}>
+            <div className="bg-card border border-border rounded-lg p-6 max-w-sm mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Delete this audit?</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                This will permanently delete this audit and all its Duelly scan results. This cannot be undone.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(deleteConfirm)}>Delete</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )

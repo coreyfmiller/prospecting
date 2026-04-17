@@ -529,6 +529,13 @@ export function updateAuditResult(auditId: string, businessId: string, duellySca
   }
 }
 
+export function deleteAudit(auditId: string): void {
+  const pid = getActiveProjectId()
+  if (!pid) return
+  const audits = getAudits().filter((a) => a.id !== auditId)
+  localStorage.setItem(auditsKey(pid), JSON.stringify(audits))
+}
+
 // --- CSV Export ---
 
 export function exportToCSV(businesses: SavedBusiness[]): string {
