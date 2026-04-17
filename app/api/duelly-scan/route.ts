@@ -7,22 +7,8 @@ export interface DuellyScanResult {
   seoScore: number
   geoScore: number
   domainAuthority: number
-  pageAuthority: number
-  totalBacklinks: number
-  linkingDomains: number
-  spamScore: number
-  topBacklinks: {
-    sourceDomain: string
-    sourceUrl: string
-    anchorText: string
-    domainAuthority: number
-    isDofollow: boolean
-  }[]
-  pageSpeedMobile: number | null
-  pageSpeedDesktop: number | null
-  platform: string | null
   criticalIssues: string[]
-  scannedAt: string
+  scannedAt?: string
 }
 
 export async function POST(req: NextRequest) {

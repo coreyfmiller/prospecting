@@ -431,24 +431,6 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
                 <p className="text-xs text-muted-foreground">DA</p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {duellyScan.pageSpeedMobile !== null && (
-                <Badge variant={duellyScan.pageSpeedMobile >= 50 ? "secondary" : "destructive"} className="text-xs">
-                  Mobile: {duellyScan.pageSpeedMobile}/100
-                </Badge>
-              )}
-              <Badge variant="outline" className="text-xs">
-                {duellyScan.totalBacklinks} backlinks
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                {duellyScan.linkingDomains} domains
-              </Badge>
-              {duellyScan.spamScore > 30 && (
-                <Badge variant="destructive" className="text-xs">
-                  Spam: {duellyScan.spamScore}%
-                </Badge>
-              )}
-            </div>
             {duellyScan.criticalIssues.length > 0 && (
               <div className="text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">Issues: </span>
