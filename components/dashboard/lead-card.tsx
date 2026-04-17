@@ -31,7 +31,8 @@ import {
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, toggleServiceTag, saveEmails, SERVICE_TAGS, type PipelineStage } from "@/lib/storage"
+import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
+import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, toggleServiceTag, saveEmails, saveDuellyScan, SERVICE_TAGS, type PipelineStage } from "@/lib/storage"
 import { addToBlocklist } from "@/lib/blocklist"
 
 const presenceConfig = {
@@ -42,7 +43,7 @@ const presenceConfig = {
 }
 
 interface LeadCardProps {
-  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage; needsSEO?: boolean; serviceTags?: string[]; emails?: string[]; rankings?: { query: string; position: number; date: string }[] }
+  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage; needsSEO?: boolean; serviceTags?: string[]; emails?: string[]; rankings?: { query: string; position: number; date: string }[]; duellyScan?: DuellyScanResult }
   onProspectChange?: () => void
   onBlock?: (name: string) => void
 }
@@ -61,6 +62,9 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [emails, setEmails] = useState<string[]>(business.emails || (business.analysis?.emails || []))
   const [findingEmail, setFindingEmail] = useState(false)
   const [rankings] = useState(business.rankings || [])
+  const [duellyScan, setDuellyScan] = useState<DuellyScanResult | null>(business.duellyScan || null)
+  const [scanningDuelly, setScanningDuelly] = useState(false)
+  const [duellyError, setDuellyError] = useState<string | null>(null)
 
   const presence = presenceConfig[business.webPresence]
   const PresenceIcon = presence.icon
@@ -111,6 +115,29 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
       }
     } catch {}
     setFindingEmail(false)
+  }
+
+  const handleDuellyScan = async () => {
+    if (!business.website) return
+    setScanningDuelly(true)
+    setDuellyError(null)
+    try {
+      const res = await fetch("/api/duelly-scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: business.website }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Scan failed")
+      }
+      const data = await res.json()
+      setDuellyScan(data)
+      saveDuellyScan(business.id, data)
+    } catch (err: any) {
+      setDuellyError(err.message || "Duelly scan failed")
+    }
+    setScanningDuelly(false)
   }
 
   const handleToggleProspect = () => {
@@ -355,6 +382,80 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
             <p className="text-xs text-muted-foreground leading-relaxed">
               {analysis.summary}
             </p>
+          </div>
+        )}
+
+        {/* Duelly Scan Button */}
+        {canAnalyze && !duellyScan && (
+          <Button
+            onClick={handleDuellyScan}
+            disabled={scanningDuelly}
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
+          >
+            {scanningDuelly ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Running Duelly scan...</>
+            ) : (
+              <><TrendingUp className="w-4 h-4" /> Duelly Scan</>
+            )}
+          </Button>
+        )}
+
+        {duellyError && (
+          <p className="text-xs text-destructive">{duellyError}</p>
+        )}
+
+        {/* Duelly Scan Results */}
+        {duellyScan && (
+          <div className="space-y-2 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+            <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
+              Duelly Report
+            </p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className={`text-lg font-bold ${duellyScan.seoScore >= 60 ? "text-green-600" : duellyScan.seoScore >= 30 ? "text-amber-500" : "text-red-500"}`}>
+                  {duellyScan.seoScore}
+                </p>
+                <p className="text-xs text-muted-foreground">SEO</p>
+              </div>
+              <div>
+                <p className={`text-lg font-bold ${duellyScan.geoScore >= 60 ? "text-green-600" : duellyScan.geoScore >= 30 ? "text-amber-500" : "text-red-500"}`}>
+                  {duellyScan.geoScore}
+                </p>
+                <p className="text-xs text-muted-foreground">GEO</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-foreground">{duellyScan.domainAuthority}</p>
+                <p className="text-xs text-muted-foreground">DA</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {duellyScan.pageSpeedMobile !== null && (
+                <Badge variant={duellyScan.pageSpeedMobile >= 50 ? "secondary" : "destructive"} className="text-xs">
+                  Mobile: {duellyScan.pageSpeedMobile}/100
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs">
+                {duellyScan.totalBacklinks} backlinks
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                {duellyScan.linkingDomains} domains
+              </Badge>
+              {duellyScan.spamScore > 30 && (
+                <Badge variant="destructive" className="text-xs">
+                  Spam: {duellyScan.spamScore}%
+                </Badge>
+              )}
+            </div>
+            {duellyScan.criticalIssues.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Issues: </span>
+                {duellyScan.criticalIssues.slice(0, 3).join(", ")}
+                {duellyScan.criticalIssues.length > 3 && ` +${duellyScan.criticalIssues.length - 3} more`}
+              </div>
+            )}
           </div>
         )}
 

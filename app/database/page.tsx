@@ -113,6 +113,11 @@ export default function DatabasePage() {
       if (sortBy === "name") return a.name.localeCompare(b.name)
       if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0)
       if (sortBy === "date") return new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime()
+      if (sortBy === "category") return (a.category || "zzz").localeCompare(b.category || "zzz")
+      if (sortBy === "presence") {
+        const order = { none: 0, "social-only": 1, "facebook-only": 2, website: 3 }
+        return (order[a.webPresence] || 0) - (order[b.webPresence] || 0)
+      }
       return 0
     })
 
@@ -205,6 +210,8 @@ export default function DatabasePage() {
                 <SelectItem value="name">Name A-Z</SelectItem>
                 <SelectItem value="rating">Highest Rating</SelectItem>
                 <SelectItem value="date">Newest First</SelectItem>
+                <SelectItem value="category">Category</SelectItem>
+                <SelectItem value="presence">Web Presence</SelectItem>
               </SelectContent>
             </Select>
           </div>

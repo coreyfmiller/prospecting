@@ -1,5 +1,6 @@
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
+import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
 
 // --- Types ---
 
@@ -31,6 +32,7 @@ export interface SavedBusiness extends Business {
   serviceTags?: string[]
   emails?: string[]
   rankings?: RankingEntry[]
+  duellyScan?: DuellyScanResult
 }
 
 export interface SearchReport {
@@ -383,6 +385,15 @@ export function saveEmails(businessId: string, emails: string[]): void {
     const existing = businesses[idx].emails || []
     const merged = Array.from(new Set([...existing, ...emails]))
     businesses[idx].emails = merged
+    _saveBusinessList(businesses)
+  }
+}
+
+export function saveDuellyScan(businessId: string, scan: DuellyScanResult): void {
+  const businesses = getSavedBusinesses()
+  const idx = businesses.findIndex((b) => b.id === businessId)
+  if (idx !== -1) {
+    businesses[idx].duellyScan = scan
     _saveBusinessList(businesses)
   }
 }
