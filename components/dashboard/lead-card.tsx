@@ -386,7 +386,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
         )}
 
         {/* Duelly Scan Button */}
-        {canAnalyze && !duellyScan && (
+        {canAnalyze && (
           <Button
             onClick={handleDuellyScan}
             disabled={scanningDuelly}
@@ -397,7 +397,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
             {scanningDuelly ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Running Duelly scan...</>
             ) : (
-              <><TrendingUp className="w-4 h-4" /> Duelly Scan</>
+              <><TrendingUp className="w-4 h-4" /> {duellyScan ? "Rescan with Duelly" : "Duelly Scan"}</>
             )}
           </Button>
         )}
