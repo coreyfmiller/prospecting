@@ -61,6 +61,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [serviceTags, setServiceTags] = useState<string[]>(business.serviceTags || (business.needsSEO ? ["pitch-seo"] : []))
   const [emails, setEmails] = useState<string[]>(business.emails || (business.analysis?.emails || []))
   const [findingEmail, setFindingEmail] = useState(false)
+  const [emailNotFound, setEmailNotFound] = useState(false)
   const [rankings] = useState(business.rankings || [])
   const [duellyScan, setDuellyScan] = useState<DuellyScanResult | null>(business.duellyScan || null)
   const [scanningDuelly, setScanningDuelly] = useState(false)
@@ -100,6 +101,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
 
   const handleFindEmail = async () => {
     setFindingEmail(true)
+    setEmailNotFound(false)
     try {
       const res = await fetch("/api/find-email", {
         method: "POST",
@@ -111,9 +113,15 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
         if (data.emails?.length) {
           saveEmails(business.id, data.emails)
           setEmails((prev) => Array.from(new Set([...prev, ...data.emails])))
+        } else {
+          setEmailNotFound(true)
         }
+      } else {
+        setEmailNotFound(true)
       }
-    } catch {}
+    } catch {
+      setEmailNotFound(true)
+    }
     setFindingEmail(false)
   }
 
@@ -283,7 +291,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
         )}
 
         {/* Find Email Button */}
-        {emails.length === 0 && (
+        {emails.length === 0 && !emailNotFound && (
           <Button onClick={handleFindEmail} disabled={findingEmail} variant="outline" size="sm" className="w-full gap-2">
             {findingEmail ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Finding email...</>
@@ -291,6 +299,9 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
               <><Mail className="w-4 h-4" /> Find Email</>
             )}
           </Button>
+        )}
+        {emailNotFound && emails.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-1">No email found</p>
         )}
 
         {/* Rankings */}
