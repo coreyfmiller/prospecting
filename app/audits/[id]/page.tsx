@@ -3,52 +3,56 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { DashboardHeader } from "@/components/dashboard/header"
+import { LeadCard } from "@/components/dashboard/lead-card"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Globe, XCircle, Facebook, MapPin, Phone, ExternalLink, Star,
-  TrendingUp, Loader2, ArrowLeft, Download, Map,
-} from "lucide-react"
-import { getAudit, updateAuditResult, type Audit, type AuditResult } from "@/lib/storage"
+import { TrendingUp, Loader2, ArrowLeft, Download } from "lucide-react"
+import { getAudit, updateAuditResult, getSavedBusinesses, type Audit, type SavedBusiness } from "@/lib/storage"
 import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
 import Link from "next/link"
 
 export default function AuditDetailPage() {
   const params = useParams()
   const [audit, setAudit] = useState<Audit | null>(null)
-  const [scanning, setScanning] = useState<string | null>(null)
+  const [businesses, setBusinesses] = useState<SavedBusiness[]>([])
   const [batchScanning, setBatchScanning] = useState(false)
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 })
-  const [sortBy, setSortBy] = useState<"name" | "seo" | "geo" | "da">("name")
 
   useEffect(() => {
     const a = getAudit(params.id as string)
     setAudit(a)
-  }, [params.id])
-
-  const handleScanOne = async (result: AuditResult) => {
-    if (!result.website) return
-    setScanning(result.businessId)
-    try {
-      const res = await fetch("/api/duelly-scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: result.website }),
+    // Load full business data from storage to get all card features
+    if (a) {
+      const allBiz = getSavedBusinesses()
+      const matched = a.results.map((r) => {
+        const saved = allBiz.find((b) => b.name === r.name && b.address === r.address)
+        if (saved) return saved
+        // Fallback: create a minimal business object from audit data
+        return {
+          id: r.businessId,
+          name: r.name,
+          address: r.address,
+          phone: r.phone,
+          website: r.website,
+          hasWebsite: r.hasWebsite,
+          webPresence: r.webPresence as any,
+          rating: r.rating,
+          reviewCount: r.reviewCount,
+          category: r.category,
+          googleMapsUri: r.googleMapsUri,
+          source: "google" as const,
+          savedAt: a.date,
+          searchQuery: a.query,
+        } as SavedBusiness
       })
-      if (res.ok) {
-        const data: DuellyScanResult = await res.json()
-        updateAuditResult(audit!.id, result.businessId, data)
-        setAudit(getAudit(audit!.id))
-      }
-    } catch {}
-    setScanning(null)
-  }
+      setBusinesses(matched)
+    }
+  }, [params.id])
 
   const handleBatchScan = async (count: number) => {
     if (!audit) return
-    const toScan = audit.results
-      .filter((r) => r.hasWebsite && r.website && !r.duellyScan)
+    const toScan = businesses
+      .filter((b) => b.hasWebsite && b.website && !b.duellyScan)
       .slice(0, count)
     if (toScan.length === 0) return
     setBatchScanning(true)
@@ -63,25 +67,32 @@ export default function AuditDetailPage() {
         })
         if (res.ok) {
           const data: DuellyScanResult = await res.json()
-          updateAuditResult(audit.id, toScan[i].businessId, data)
+          updateAuditResult(audit.id, toScan[i].id, data)
         }
       } catch {}
       setBatchProgress({ done: i + 1, total: toScan.length })
     }
 
-    setAudit(getAudit(audit.id))
+    // Reload data
+    const a = getAudit(audit.id)
+    setAudit(a)
+    const allBiz = getSavedBusinesses()
+    if (a) {
+      const matched = a.results.map((r) => {
+        const saved = allBiz.find((b) => b.name === r.name && b.address === r.address)
+        return saved || { ...r, id: r.businessId, source: "google" as const, savedAt: a.date, searchQuery: a.query } as any
+      })
+      setBusinesses(matched)
+    }
     setBatchScanning(false)
   }
 
   const handleExport = () => {
     if (!audit) return
-    const headers = ["Name", "Address", "Phone", "Website", "Web Presence", "Rating", "SEO Score", "GEO Score", "DA", "Critical Issues"]
-    const rows = getSorted().map((r) => [
-      r.name, r.address, r.phone || "", r.website || "",
-      r.webPresence, r.rating?.toString() || "",
-      r.duellyScan?.seoScore?.toString() || "", r.duellyScan?.geoScore?.toString() || "",
-      r.duellyScan?.domainAuthority?.toString() || "",
-      (r.duellyScan?.criticalIssues || []).join("; "),
+    const headers = ["Name", "Address", "Phone", "Website", "Web Presence", "Rating", "Category"]
+    const rows = businesses.map((b) => [
+      b.name, b.address, b.phone || "", b.website || "",
+      b.webPresence, b.rating?.toString() || "", b.category || "",
     ])
     const escape = (v: string) => v.includes(",") || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v
     const csv = [headers.join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n")
@@ -94,16 +105,6 @@ export default function AuditDetailPage() {
     URL.revokeObjectURL(url)
   }
 
-  const getSorted = () => {
-    if (!audit) return []
-    const results = [...audit.results]
-    if (sortBy === "name") return results.sort((a, b) => a.name.localeCompare(b.name))
-    if (sortBy === "seo") return results.sort((a, b) => (a.duellyScan?.seoScore ?? 999) - (b.duellyScan?.seoScore ?? 999))
-    if (sortBy === "geo") return results.sort((a, b) => (a.duellyScan?.geoScore ?? 999) - (b.duellyScan?.geoScore ?? 999))
-    if (sortBy === "da") return results.sort((a, b) => (a.duellyScan?.domainAuthority ?? 999) - (b.duellyScan?.domainAuthority ?? 999))
-    return results
-  }
-
   if (!audit) return (
     <div className="min-h-screen flex flex-col bg-background">
       <DashboardHeader />
@@ -113,23 +114,13 @@ export default function AuditDetailPage() {
     </div>
   )
 
-  const sorted = getSorted()
-  const scannedCount = audit.results.filter((r) => r.duellyScan).length
-  const websiteCount = audit.results.filter((r) => r.hasWebsite).length
-  const avgSeo = scannedCount > 0 ? Math.round(audit.results.filter((r) => r.duellyScan).reduce((sum, r) => sum + (r.duellyScan?.seoScore || 0), 0) / scannedCount) : null
-  const avgGeo = scannedCount > 0 ? Math.round(audit.results.filter((r) => r.duellyScan).reduce((sum, r) => sum + (r.duellyScan?.geoScore || 0), 0) / scannedCount) : null
-
-  const presenceIcon = (wp: string) => {
-    if (wp === "website") return <Globe className="w-4 h-4 text-green-500" />
-    if (wp === "facebook-only") return <Facebook className="w-4 h-4 text-blue-500" />
-    return <XCircle className="w-4 h-4 text-red-500" />
-  }
+  const websiteCount = businesses.filter((b) => b.hasWebsite).length
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <DashboardHeader />
       <main className="flex-1 p-4 sm:p-6">
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <Link href="/audits" className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 mb-2">
@@ -137,41 +128,15 @@ export default function AuditDetailPage() {
               </Link>
               <h1 className="text-xl font-bold text-foreground">"{audit.query}"</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {audit.results.length} competitors · {websiteCount} with websites · {scannedCount} scanned · {new Date(audit.date).toLocaleDateString()}
+                {businesses.length} businesses · {websiteCount} with websites · {new Date(audit.date).toLocaleDateString()}
               </p>
             </div>
-            <div className="flex gap-2 shrink-0">
-              <Button onClick={handleExport} variant="outline" size="sm" className="gap-1.5">
-                <Download className="w-4 h-4" /> Export
-              </Button>
-            </div>
+            <Button onClick={handleExport} variant="outline" size="sm" className="gap-1.5 shrink-0">
+              <Download className="w-4 h-4" /> Export
+            </Button>
           </div>
 
-          {/* Summary stats if scanned */}
-          {scannedCount > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Card><CardContent className="p-3 text-center">
-                <p className="text-lg font-bold">{scannedCount}/{websiteCount}</p>
-                <p className="text-xs text-muted-foreground">Scanned</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-3 text-center">
-                <p className={`text-lg font-bold ${(avgSeo || 0) >= 60 ? "text-green-600" : (avgSeo || 0) >= 30 ? "text-amber-500" : "text-red-500"}`}>{avgSeo}</p>
-                <p className="text-xs text-muted-foreground">Avg SEO</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-3 text-center">
-                <p className={`text-lg font-bold ${(avgGeo || 0) >= 60 ? "text-green-600" : (avgGeo || 0) >= 30 ? "text-amber-500" : "text-red-500"}`}>{avgGeo}</p>
-                <p className="text-xs text-muted-foreground">Avg GEO</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-3 text-center">
-                <p className="text-lg font-bold text-foreground">
-                  {Math.round(audit.results.filter((r) => r.duellyScan).reduce((sum, r) => sum + (r.duellyScan?.domainAuthority || 0), 0) / scannedCount)}
-                </p>
-                <p className="text-xs text-muted-foreground">Avg DA</p>
-              </CardContent></Card>
-            </div>
-          )}
-
-          {/* Batch scan buttons */}
+          {/* Duelly batch scan */}
           <div className="flex flex-col gap-3 p-4 bg-muted/30 rounded-lg border border-border/50">
             <div className="flex items-center gap-2">
               <img src="/logo.png" alt="Duelly.ai" className="h-6" />
@@ -187,101 +152,13 @@ export default function AuditDetailPage() {
               <Button onClick={() => handleBatchScan(999)} disabled={batchScanning} variant="outline" size="sm" className="gap-1.5 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400">
                 <TrendingUp className="w-4 h-4" /> Duelly All
               </Button>
-              <div className="ml-auto flex gap-1">
-              {(["name", "seo", "geo", "da"] as const).map((s) => (
-                <Button key={s} variant={sortBy === s ? "default" : "outline"} size="sm" onClick={() => setSortBy(s)}>
-                  {s === "name" ? "A-Z" : s.toUpperCase()}
-                </Button>
-              ))}
-            </div>
             </div>
           </div>
 
-          {/* Results list */}
-          <div className="space-y-2">
-            {sorted.map((r) => (
-              <Card key={r.businessId} className="overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    {/* Business info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {presenceIcon(r.webPresence)}
-                        <h3 className="font-medium text-foreground truncate">{r.name}</h3>
-                        {r.rating && (
-                          <span className="flex items-center gap-0.5 text-xs text-muted-foreground shrink-0">
-                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" /> {r.rating}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {r.address}</span>
-                        {r.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {r.phone}</span>}
-                        {r.website && (
-                          <a href={r.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary">
-                            <ExternalLink className="w-3 h-3" /> {r.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-                          </a>
-                        )}
-                        {r.googleMapsUri && (
-                          <a href={r.googleMapsUri} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary">
-                            <Map className="w-3 h-3" /> Maps
-                          </a>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Duelly scores or scan button */}
-                    <div className="shrink-0">
-                      {r.duellyScan ? (
-                        <div className="flex items-center gap-3 text-center">
-                          <div>
-                            <p className={`text-sm font-bold ${r.duellyScan.seoScore >= 60 ? "text-green-600" : r.duellyScan.seoScore >= 30 ? "text-amber-500" : "text-red-500"}`}>
-                              {r.duellyScan.seoScore}
-                            </p>
-                            <p className="text-xs text-muted-foreground">SEO</p>
-                          </div>
-                          <div>
-                            <p className={`text-sm font-bold ${r.duellyScan.geoScore >= 60 ? "text-green-600" : r.duellyScan.geoScore >= 30 ? "text-amber-500" : "text-red-500"}`}>
-                              {r.duellyScan.geoScore}
-                            </p>
-                            <p className="text-xs text-muted-foreground">GEO</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-foreground">{r.duellyScan.domainAuthority}</p>
-                            <p className="text-xs text-muted-foreground">DA</p>
-                          </div>
-                        </div>
-                      ) : r.hasWebsite ? (
-                        <Button
-                          onClick={() => handleScanOne(r)}
-                          disabled={scanning === r.businessId}
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400"
-                        >
-                          {scanning === r.businessId ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <TrendingUp className="w-3 h-3" />
-                          )}
-                          Duelly
-                        </Button>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">No site</Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Critical issues */}
-                  {r.duellyScan?.criticalIssues && r.duellyScan.criticalIssues.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {r.duellyScan.criticalIssues.map((issue) => (
-                        <Badge key={issue} variant="outline" className="text-xs">{issue}</Badge>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+          {/* Business cards - same as rest of site */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {businesses.map((business) => (
+              <LeadCard key={business.id} business={business} />
             ))}
           </div>
         </div>

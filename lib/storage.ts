@@ -52,7 +52,6 @@ export interface AuditResult {
   website?: string
   hasWebsite: boolean
   webPresence: string
-  position: number
   rating?: number
   reviewCount?: number
   category?: string

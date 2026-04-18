@@ -62,6 +62,8 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [emails, setEmails] = useState<string[]>(business.emails || (business.analysis?.emails || []))
   const [findingEmail, setFindingEmail] = useState(false)
   const [emailNotFound, setEmailNotFound] = useState(false)
+  const [manualEmail, setManualEmail] = useState("")
+  const [editingEmail, setEditingEmail] = useState(false)
   const [rankings] = useState(business.rankings || [])
   const [duellyScan, setDuellyScan] = useState<DuellyScanResult | null>(business.duellyScan || null)
   const [scanningDuelly, setScanningDuelly] = useState(false)
@@ -279,7 +281,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
         </div>
 
         {/* Emails */}
-        {emails.length > 0 && (
+        {emails.length > 0 && !editingEmail && (
           <div className="space-y-1">
             {emails.map((email) => (
               <div key={email} className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -287,21 +289,66 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
                 <a href={`mailto:${email}`} className="truncate hover:text-primary transition-colors">{email}</a>
               </div>
             ))}
+            <button onClick={() => setEditingEmail(true)} className="text-xs text-muted-foreground hover:text-primary ml-6">Edit</button>
           </div>
         )}
 
-        {/* Find Email Button */}
-        {emails.length === 0 && !emailNotFound && (
-          <Button onClick={handleFindEmail} disabled={findingEmail} variant="outline" size="sm" className="w-full gap-2">
-            {findingEmail ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Finding email...</>
+        {/* No email found + manual entry */}
+        {emails.length === 0 && !editingEmail && (
+          <div className="flex items-center gap-2">
+            <Mail className="w-4 h-4 shrink-0 text-muted-foreground" />
+            {emailNotFound ? (
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-xs text-muted-foreground">No email found</span>
+                <button onClick={() => setEditingEmail(true)} className="text-xs text-primary hover:underline">Add manually</button>
+              </div>
             ) : (
-              <><Mail className="w-4 h-4" /> Find Email</>
+              <div className="flex items-center gap-2 flex-1">
+                <Button onClick={handleFindEmail} disabled={findingEmail} variant="ghost" size="sm" className="h-auto py-0.5 px-2 text-xs gap-1">
+                  {findingEmail ? <><Loader2 className="w-3 h-3 animate-spin" /> Finding...</> : "Find Email"}
+                </Button>
+                <button onClick={() => setEditingEmail(true)} className="text-xs text-muted-foreground hover:text-primary">or add manually</button>
+              </div>
             )}
-          </Button>
+          </div>
         )}
-        {emailNotFound && emails.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-1">No email found</p>
+
+        {/* Email editor */}
+        {editingEmail && (
+          <div className="flex items-center gap-2">
+            <Mail className="w-4 h-4 shrink-0 text-muted-foreground" />
+            <input
+              type="email"
+              value={manualEmail}
+              onChange={(e) => setManualEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && manualEmail.trim()) {
+                  saveEmails(business.id, [manualEmail.trim()])
+                  setEmails((prev) => Array.from(new Set([...prev, manualEmail.trim()])))
+                  setManualEmail("")
+                  setEditingEmail(false)
+                }
+                if (e.key === "Escape") setEditingEmail(false)
+              }}
+              placeholder="Enter email address..."
+              className="flex-1 text-sm p-1 rounded border border-border bg-muted/30 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              autoFocus
+            />
+            <button
+              onClick={() => {
+                if (manualEmail.trim()) {
+                  saveEmails(business.id, [manualEmail.trim()])
+                  setEmails((prev) => Array.from(new Set([...prev, manualEmail.trim()])))
+                  setManualEmail("")
+                }
+                setEditingEmail(false)
+              }}
+              className="text-xs text-primary hover:underline"
+            >
+              Save
+            </button>
+            <button onClick={() => setEditingEmail(false)} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+          </div>
         )}
 
         {/* Rankings */}
