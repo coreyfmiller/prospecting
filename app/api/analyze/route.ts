@@ -11,6 +11,12 @@ export interface SiteAnalysis {
   flags: string[]
   summary: string
   emails: string[]
+  aiAssessment?: {
+    needsRefresh: boolean
+    score: number
+    reasons: string[]
+    recommendation: string
+  }
 }
 
 const PLATFORM_SIGNATURES: Record<string, RegExp[]> = {
@@ -211,6 +217,11 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
   // Extract emails from HTML
   const emails = extractEmails(html)
 
+  // AI Assessment via Gemini
+  const aiAssessment = await assessWithGemini(html, {
+    platform, estimatedAge, hasSSL, isMobileFriendly, flags,
+  })
+
   // Build summary
   const summary = buildSummary({
     platform,
@@ -234,6 +245,7 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
     flags,
     summary,
     emails,
+    aiAssessment,
   }
 }
 
@@ -312,4 +324,73 @@ function buildSummary(data: {
   }
 
   return parts.join(" ")
+}
+
+async function assessWithGemini(
+  html: string,
+  context: { platform?: string; estimatedAge?: string; hasSSL: boolean; isMobileFriendly: boolean; flags: string[] }
+): Promise<{ needsRefresh: boolean; score: number; reasons: string[]; recommendation: string } | undefined> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) return undefined
+
+  // Trim HTML to avoid token limits — keep first 8000 chars
+  const trimmedHtml = html.slice(0, 8000)
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `You are a web design expert evaluating whether a business website needs a redesign or refresh.
+
+Here is the HTML of the website (trimmed):
+${trimmedHtml}
+
+Additional context:
+- Platform: ${context.platform || "Unknown"}
+- Estimated age: ${context.estimatedAge || "Unknown"}
+- Has SSL: ${context.hasSSL}
+- Mobile friendly: ${context.isMobileFriendly}
+- Technical issues: ${context.flags.join(", ") || "None"}
+
+Evaluate this website and return ONLY a valid JSON object (no markdown, no backticks):
+{
+  "needsRefresh": true/false,
+  "score": 1-10 (1=desperately needs refresh, 10=modern and well-built),
+  "reasons": ["reason 1", "reason 2", "reason 3"],
+  "recommendation": "One sentence pitch-ready recommendation for the business owner"
+}`,
+            }],
+          }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 500,
+          },
+        }),
+        signal: AbortSignal.timeout(15000),
+      }
+    )
+
+    if (!response.ok) return undefined
+
+    const data = await response.json()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ""
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) return undefined
+
+    const parsed = JSON.parse(jsonMatch[0])
+    return {
+      needsRefresh: !!parsed.needsRefresh,
+      score: Math.min(10, Math.max(1, parseInt(parsed.score) || 5)),
+      reasons: Array.isArray(parsed.reasons) ? parsed.reasons.slice(0, 5) : [],
+      recommendation: parsed.recommendation || "",
+    }
+  } catch (e) {
+    console.error("Gemini assessment error:", e)
+    return undefined
+  }
 }

@@ -382,6 +382,33 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
             <p className="text-xs text-muted-foreground leading-relaxed">
               {analysis.summary}
             </p>
+
+            {analysis.aiAssessment && (
+              <div className="pt-2 border-t border-border/30 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium">Refresh Score</span>
+                  <span className={`text-xs font-bold ${
+                    analysis.aiAssessment.score <= 3 ? "text-red-500" :
+                    analysis.aiAssessment.score <= 6 ? "text-amber-500" : "text-green-500"
+                  }`}>
+                    {analysis.aiAssessment.score}/10
+                    {analysis.aiAssessment.needsRefresh && " — Needs Refresh"}
+                  </span>
+                </div>
+                {analysis.aiAssessment.reasons.length > 0 && (
+                  <ul className="text-xs text-muted-foreground space-y-0.5">
+                    {analysis.aiAssessment.reasons.map((r, i) => (
+                      <li key={i}>• {r}</li>
+                    ))}
+                  </ul>
+                )}
+                {analysis.aiAssessment.recommendation && (
+                  <p className="text-xs text-primary font-medium italic">
+                    "{analysis.aiAssessment.recommendation}"
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
