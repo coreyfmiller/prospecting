@@ -368,7 +368,8 @@ Evaluate this website and return ONLY a valid JSON object (no markdown, no backt
           }],
           generationConfig: {
             temperature: 0.3,
-            maxOutputTokens: 500,
+            maxOutputTokens: 1000,
+            thinkingConfig: { thinkingBudget: 0 },
           },
         }),
         signal: AbortSignal.timeout(30000),
