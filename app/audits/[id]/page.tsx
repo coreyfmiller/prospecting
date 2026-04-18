@@ -136,25 +136,6 @@ export default function AuditDetailPage() {
             </Button>
           </div>
 
-          {/* Duelly batch scan */}
-          <div className="flex flex-col gap-3 p-4 bg-muted/30 rounded-lg border border-border/50">
-            <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="Duelly.ai" className="h-6" />
-              <span className="text-sm text-muted-foreground">Competitive Analysis</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={() => handleBatchScan(5)} disabled={batchScanning} variant="outline" size="sm" className="gap-1.5 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400">
-                {batchScanning ? <><Loader2 className="w-4 h-4 animate-spin" /> {batchProgress.done}/{batchProgress.total}</> : <><TrendingUp className="w-4 h-4" /> Duelly Top 5</>}
-              </Button>
-              <Button onClick={() => handleBatchScan(10)} disabled={batchScanning} variant="outline" size="sm" className="gap-1.5 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400">
-                <TrendingUp className="w-4 h-4" /> Duelly Top 10
-              </Button>
-              <Button onClick={() => handleBatchScan(999)} disabled={batchScanning} variant="outline" size="sm" className="gap-1.5 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400">
-                <TrendingUp className="w-4 h-4" /> Duelly All
-              </Button>
-            </div>
-          </div>
-
           {/* Business cards - same as rest of site */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {businesses.map((business) => (

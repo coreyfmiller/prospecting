@@ -352,23 +352,6 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
           </div>
         )}
 
-        {/* Rankings */}
-        {rankings.length > 0 && (
-          <div className="space-y-1 p-2 bg-muted/30 rounded-md">
-            <p className="text-xs font-medium text-foreground flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5 text-primary" /> Rankings
-            </p>
-            {rankings.map((r) => (
-              <div key={r.query} className="flex justify-between items-center text-xs">
-                <span className="text-muted-foreground truncate mr-2">"{r.query}"</span>
-                <Badge variant={r.position <= 3 ? "default" : r.position <= 10 ? "secondary" : "outline"} className="shrink-0">
-                  #{r.position}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Analyze Button */}
         {canAnalyze && !analysis && (
           <Button
