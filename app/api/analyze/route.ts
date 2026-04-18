@@ -371,14 +371,16 @@ Evaluate this website and return ONLY a valid JSON object (no markdown, no backt
             maxOutputTokens: 500,
           },
         }),
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(30000),
       }
     )
 
     if (!response.ok) return undefined
 
     const data = await response.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ""
+    const parts = data.candidates?.[0]?.content?.parts || []
+    // Gemini 2.5 may return multiple parts (thinking + response) — get the last text part
+    const text = parts.filter((p: any) => p.text).map((p: any) => p.text).join("\n")
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return undefined
 
