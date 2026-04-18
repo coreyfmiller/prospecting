@@ -109,6 +109,12 @@ export default function Dashboard() {
           const data = await res.json()
           const { saveAnalysis } = await import("@/lib/storage")
           saveAnalysis(toAnalyze[i].id, data)
+          // Update the card in real time
+          setBusinesses((prev) =>
+            prev.map((b) =>
+              b.id === toAnalyze[i].id ? { ...b, analysis: data } : b
+            )
+          )
         }
       } catch {}
       setAnalyzeProgress({ done: i + 1, total: toAnalyze.length })

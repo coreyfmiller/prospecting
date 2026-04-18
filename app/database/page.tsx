@@ -62,12 +62,16 @@ export default function DatabasePage() {
         if (res.ok) {
           const data = await res.json()
           saveAnalysis(toAnalyze[i].id, data)
+          setBusinesses((prev) =>
+            prev.map((b) =>
+              b.id === toAnalyze[i].id ? { ...b, analysis: data } : b
+            )
+          )
         }
       } catch {}
       setAnalyzeProgress({ done: i + 1, total: toAnalyze.length })
     }
     setAnalyzingAll(false)
-    refreshData()
   }
 
   useEffect(() => {
