@@ -287,9 +287,9 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
               <div key={email} className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Mail className="w-4 h-4 shrink-0 text-green-500" />
                 <a href={`mailto:${email}`} className="truncate hover:text-primary transition-colors">{email}</a>
+                <button onClick={() => setEditingEmail(true)} className="text-xs text-muted-foreground hover:text-primary shrink-0">Edit</button>
               </div>
             ))}
-            <button onClick={() => setEditingEmail(true)} className="text-xs text-muted-foreground hover:text-primary ml-6">Edit</button>
           </div>
         )}
 
