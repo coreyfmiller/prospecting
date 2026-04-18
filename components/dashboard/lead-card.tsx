@@ -295,22 +295,23 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
 
         {/* No email found + manual entry */}
         {emails.length === 0 && !editingEmail && (
-          <div className="flex items-center gap-2">
-            <Mail className="w-4 h-4 shrink-0 text-muted-foreground" />
+          <>
             {emailNotFound ? (
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 shrink-0 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">No email found</span>
                 <button onClick={() => setEditingEmail(true)} className="text-xs text-primary hover:underline">Add manually</button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 flex-1">
-                <Button onClick={handleFindEmail} disabled={findingEmail} variant="ghost" size="sm" className="h-auto py-0.5 px-2 text-xs gap-1">
-                  {findingEmail ? <><Loader2 className="w-3 h-3 animate-spin" /> Finding...</> : "Find Email"}
-                </Button>
-                <button onClick={() => setEditingEmail(true)} className="text-xs text-muted-foreground hover:text-primary">or add manually</button>
-              </div>
+              <Button onClick={handleFindEmail} disabled={findingEmail} variant="outline" size="sm" className="w-full gap-2">
+                {findingEmail ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Finding email...</>
+                ) : (
+                  <><Mail className="w-4 h-4" /> Find Email</>
+                )}
+              </Button>
             )}
-          </div>
+          </>
         )}
 
         {/* Email editor */}
