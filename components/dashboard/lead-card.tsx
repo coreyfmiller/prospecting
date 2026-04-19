@@ -552,7 +552,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
                 <MapPinned className="w-3.5 h-3.5 text-blue-500" />
-                Google Business Profile
+                Google Business Score
               </p>
               <span className={`text-sm font-bold ${
                 gbpAudit.completenessScore >= 70 ? "text-green-600" :
