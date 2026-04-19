@@ -24,6 +24,8 @@ import {
   ScanSearch,
   Star,
   Loader2,
+  Flame,
+  Ban,
 } from "lucide-react"
 import {
   getSavedBusinesses,
@@ -33,7 +35,7 @@ import {
   type SavedBusiness,
 } from "@/lib/storage"
 
-type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed" | "yellow-pages" | "prospects"
+type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed" | "yellow-pages" | "prospects" | "priority" | "dismissed"
 
 export default function DatabasePage() {
   const [businesses, setBusinesses] = useState<SavedBusiness[]>([])
@@ -110,6 +112,8 @@ export default function DatabasePage() {
       if (filter === "analyzed") return !!b.analysis
       if (filter === "yellow-pages") return !!b.analysis?.isYellowPages
       if (filter === "prospects") return !!b.isProspect
+      if (filter === "priority") return !!b.isPriority
+      if (filter === "dismissed") return !!b.isDismissed
       return true
     })
 
@@ -277,6 +281,22 @@ export default function DatabasePage() {
             >
               <Star className="w-3 h-3" />
               Prospects ({stats.prospects})
+            </Badge>
+            <Badge
+              variant={filter === "priority" ? "default" : "outline"}
+              className="cursor-pointer gap-1"
+              onClick={() => setFilter("priority")}
+            >
+              <Flame className="w-3 h-3" />
+              Priority ({stats.priority})
+            </Badge>
+            <Badge
+              variant={filter === "dismissed" ? "destructive" : "outline"}
+              className="cursor-pointer gap-1"
+              onClick={() => setFilter("dismissed")}
+            >
+              <Ban className="w-3 h-3" />
+              Dismissed ({stats.dismissed})
             </Badge>
           </div>
 
