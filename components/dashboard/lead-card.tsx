@@ -28,11 +28,13 @@ import {
   SearchCheck,
   Mail,
   TrendingUp,
+  MapPinned,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
 import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
-import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, toggleServiceTag, saveEmails, saveDuellyScan, SERVICE_TAGS, type PipelineStage } from "@/lib/storage"
+import type { GBPAudit } from "@/app/api/gbp-audit/route"
+import { saveAnalysis, toggleProspect, togglePriority, toggleDismiss, saveNotes, setPipelineStage, toggleServiceTag, saveEmails, saveDuellyScan, saveGBPAudit, SERVICE_TAGS, type PipelineStage } from "@/lib/storage"
 import { addToBlocklist } from "@/lib/blocklist"
 
 const presenceConfig = {
@@ -43,7 +45,7 @@ const presenceConfig = {
 }
 
 interface LeadCardProps {
-  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage; needsSEO?: boolean; serviceTags?: string[]; emails?: string[]; rankings?: { query: string; position: number; date: string }[]; duellyScan?: DuellyScanResult }
+  business: Business & { analysis?: SiteAnalysis; isProspect?: boolean; isPriority?: boolean; isDismissed?: boolean; notes?: string; pipelineStage?: PipelineStage; needsSEO?: boolean; serviceTags?: string[]; emails?: string[]; rankings?: { query: string; position: number; date: string }[]; duellyScan?: DuellyScanResult; gbpAudit?: GBPAudit }
   onProspectChange?: () => void
   onBlock?: (name: string) => void
 }
@@ -68,6 +70,8 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [duellyScan, setDuellyScan] = useState<DuellyScanResult | null>(business.duellyScan || null)
   const [scanningDuelly, setScanningDuelly] = useState(false)
   const [duellyError, setDuellyError] = useState<string | null>(null)
+  const [gbpAudit, setGbpAudit] = useState<GBPAudit | null>(business.gbpAudit || null)
+  const [scanningGBP, setScanningGBP] = useState(false)
 
   const presence = presenceConfig[business.webPresence]
   const PresenceIcon = presence.icon
@@ -148,6 +152,23 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
       setDuellyError(err.message || "Duelly scan failed")
     }
     setScanningDuelly(false)
+  }
+
+  const handleGBPAudit = async () => {
+    setScanningGBP(true)
+    try {
+      const res = await fetch("/api/gbp-audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessName: business.name, address: business.address }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setGbpAudit(data)
+        saveGBPAudit(business.id, data)
+      }
+    } catch {}
+    setScanningGBP(false)
   }
 
   const handleToggleProspect = () => {
@@ -505,6 +526,66 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
                 <span className="font-medium text-foreground">Issues: </span>
                 {duellyScan.criticalIssues.slice(0, 3).join(", ")}
                 {duellyScan.criticalIssues.length > 3 && ` +${duellyScan.criticalIssues.length - 3} more`}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* GBP Audit Button */}
+        <Button
+          onClick={handleGBPAudit}
+          disabled={scanningGBP}
+          variant="outline"
+          size="sm"
+          className="w-full gap-2"
+        >
+          {scanningGBP ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Auditing Google Profile...</>
+          ) : (
+            <><MapPinned className="w-4 h-4" /> {gbpAudit ? "Re-audit Google Profile" : "GBP Audit"}</>
+          )}
+        </Button>
+
+        {/* GBP Audit Results */}
+        {gbpAudit && (
+          <div className="space-y-2 p-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                <MapPinned className="w-3.5 h-3.5 text-blue-500" />
+                Google Business Profile
+              </p>
+              <span className={`text-sm font-bold ${
+                gbpAudit.completenessScore >= 70 ? "text-green-600" :
+                gbpAudit.completenessScore >= 40 ? "text-amber-500" : "text-red-500"
+              }`}>
+                {gbpAudit.completenessScore}/100
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-1 text-xs">
+              <span className={gbpAudit.hasHours ? "text-green-600" : "text-red-500"}>
+                {gbpAudit.hasHours ? "✓" : "✗"} Hours
+              </span>
+              <span className={gbpAudit.hasPhone ? "text-green-600" : "text-red-500"}>
+                {gbpAudit.hasPhone ? "✓" : "✗"} Phone
+              </span>
+              <span className={gbpAudit.hasWebsite ? "text-green-600" : "text-red-500"}>
+                {gbpAudit.hasWebsite ? "✓" : "✗"} Website
+              </span>
+              <span className={gbpAudit.hasDescription ? "text-green-600" : "text-red-500"}>
+                {gbpAudit.hasDescription ? "✓" : "✗"} Description
+              </span>
+              <span className={gbpAudit.photoCount >= 5 ? "text-green-600" : gbpAudit.photoCount > 0 ? "text-amber-500" : "text-red-500"}>
+                {gbpAudit.photoCount > 0 ? "✓" : "✗"} {gbpAudit.photoCount} Photos
+              </span>
+              <span className={gbpAudit.reviewCount >= 5 ? "text-green-600" : gbpAudit.reviewCount > 0 ? "text-amber-500" : "text-red-500"}>
+                {gbpAudit.reviewCount > 0 ? "✓" : "✗"} {gbpAudit.reviewCount} Reviews
+              </span>
+            </div>
+            {gbpAudit.issues.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                {gbpAudit.issues.slice(0, 3).map((issue, i) => (
+                  <p key={i}>• {issue}</p>
+                ))}
               </div>
             )}
           </div>
