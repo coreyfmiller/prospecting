@@ -80,7 +80,7 @@ export default function DismissedPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `prospectiq-dismissed-${new Date().toISOString().split("T")[0]}.csv`
+    a.download = `marketmojo-dismissed-${new Date().toISOString().split("T")[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }

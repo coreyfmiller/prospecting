@@ -7,8 +7,8 @@ import './globals.css'
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: 'ProspectIQ - Web Design Lead Generation',
-  description: 'B2B lead generation tool for web design prospecting',
+  title: 'MarketMojo.ai - Local Business Prospecting & Intelligence',
+  description: 'Find, analyze, and pitch local businesses that need your digital services',
   generator: 'v0.app',
   icons: {
     icon: [

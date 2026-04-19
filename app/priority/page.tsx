@@ -71,7 +71,7 @@ export default function PriorityPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `prospectiq-priority-${new Date().toISOString().split("T")[0]}.csv`
+    a.download = `marketmojo-priority-${new Date().toISOString().split("T")[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
