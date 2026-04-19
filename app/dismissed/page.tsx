@@ -22,21 +22,21 @@ import {
   Ban,
 } from "lucide-react"
 import {
-  getSavedBusinesses,
+  getBusinesses,
   exportToCSV,
-  type SavedBusiness,
-} from "@/lib/storage"
+  type DbBusiness,
+} from "@/lib/db"
 
 type FilterType = "all" | "website" | "facebook-only" | "no-presence"
 
 export default function DismissedPage() {
-  const [allBusinesses, setAllBusinesses] = useState<SavedBusiness[]>([])
+  const [allBusinesses, setAllBusinesses] = useState<DbBusiness[]>([])
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
 
-  const loadData = () => {
-    const data = getSavedBusinesses().filter((b) => b.isDismissed)
+  const loadData = async () => {
+    const data = (await getBusinesses()).filter((b) => b.status === "dismissed")
     setAllBusinesses(data)
   }
 
@@ -49,10 +49,11 @@ export default function DismissedPage() {
 
   const stats = useMemo(() => ({
     total: allBusinesses.length,
-    withWebsite: allBusinesses.filter((b) => b.webPresence === "website").length,
-    facebookOnly: allBusinesses.filter((b) => b.webPresence === "facebook-only" || b.webPresence === "social-only").length,
-    noPresence: allBusinesses.filter((b) => b.webPresence === "none").length,
+    withWebsite: allBusinesses.filter((b) => b.web_presence === "website").length,
+    facebookOnly: allBusinesses.filter((b) => b.web_presence === "facebook-only" || b.web_presence === "social-only").length,
+    noPresence: allBusinesses.filter((b) => b.web_presence === "none").length,
   }), [allBusinesses])
+
 
   const filtered = useMemo(() => {
     return allBusinesses.filter((b) => {
@@ -67,9 +68,9 @@ export default function DismissedPage() {
         if (!match) return false
       }
       if (categoryFilter !== "all" && b.category !== categoryFilter) return false
-      if (filter === "website") return b.webPresence === "website"
-      if (filter === "facebook-only") return b.webPresence === "facebook-only" || b.webPresence === "social-only"
-      if (filter === "no-presence") return b.webPresence === "none"
+      if (filter === "website") return b.web_presence === "website"
+      if (filter === "facebook-only") return b.web_presence === "facebook-only" || b.web_presence === "social-only"
+      if (filter === "no-presence") return b.web_presence === "none"
       return true
     })
   }, [allBusinesses, filter, searchTerm, categoryFilter])

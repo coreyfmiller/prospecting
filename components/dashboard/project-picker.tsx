@@ -17,31 +17,34 @@ import {
   createProject,
   deleteProject,
   getActiveProject,
-  setActiveProject,
+  setActiveProjectId,
   ensureProject,
   getStorageUsage,
-  type Project,
-} from "@/lib/storage"
+  type DbProject,
+} from "@/lib/db"
 
 export function ProjectPicker() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [active, setActive] = useState<Project | null>(null)
+  const [projects, setProjects] = useState<DbProject[]>([])
+  const [active, setActive] = useState<DbProject | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState("")
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [storage, setStorage] = useState({ usedMB: 0, totalMB: 5, percent: 0 })
 
   useEffect(() => {
-    const p = ensureProject()
-    setProjects(getProjects())
-    setActive(p)
-    setStorage(getStorageUsage())
+    const init = async () => {
+      const p = await ensureProject()
+      setProjects(await getProjects())
+      setActive(p)
+      setStorage(getStorageUsage())
+    }
+    init()
   }, [])
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newName.trim()) return
-    const p = createProject(newName.trim())
-    setProjects(getProjects())
+    const p = await createProject(newName.trim())
+    setProjects(await getProjects())
     setActive(p)
     setNewName("")
     setShowCreate(false)
@@ -49,14 +52,14 @@ export function ProjectPicker() {
   }
 
   const handleSwitch = (projectId: string) => {
-    setActiveProject(projectId)
+    setActiveProjectId(projectId)
     window.location.reload()
   }
 
-  const handleDelete = (projectId: string) => {
-    deleteProject(projectId)
-    setProjects(getProjects())
-    setActive(getActiveProject())
+  const handleDelete = async (projectId: string) => {
+    await deleteProject(projectId)
+    setProjects(await getProjects())
+    setActive(await getActiveProject())
     setShowDeleteConfirm(null)
     window.location.reload()
   }

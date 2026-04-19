@@ -28,32 +28,32 @@ import {
   Ban,
 } from "lucide-react"
 import {
-  getSavedBusinesses,
+  getBusinesses,
   getStats,
   clearProjectData,
   exportToCSV,
-  type SavedBusiness,
-} from "@/lib/storage"
+  type DbBusiness,
+} from "@/lib/db"
 
 type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed" | "yellow-pages" | "prospects" | "priority" | "dismissed"
 
 export default function DatabasePage() {
-  const [businesses, setBusinesses] = useState<SavedBusiness[]>([])
+  const [businesses, setBusinesses] = useState<DbBusiness[]>([])
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
-  const [stats, setStats] = useState(getStats())
+  const [stats, setStats] = useState<any>({})
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [sortBy, setSortBy] = useState("name")
   const [analyzingAll, setAnalyzingAll] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 })
 
   const handleAnalyzeAll = async () => {
-    const toAnalyze = filtered.filter((b) => b.webPresence === "website" && b.website && !b.analysis)
+    const toAnalyze = filtered.filter((b) => b.web_presence === "website" && b.website && !b.analysis)
     if (toAnalyze.length === 0) return
     setAnalyzingAll(true)
     setAnalyzeProgress({ done: 0, total: toAnalyze.length })
-    const { saveAnalysis } = await import("@/lib/storage")
+    const { saveAnalysis } = await import("@/lib/db")
     for (let i = 0; i < toAnalyze.length; i++) {
       try {
         const res = await fetch("/api/analyze", {
@@ -77,15 +77,20 @@ export default function DatabasePage() {
   }
 
   useEffect(() => {
-    const data = getSavedBusinesses()
-    setBusinesses(data)
-    setStats(getStats())
+    const load = async () => {
+      const data = await getBusinesses()
+      setBusinesses(data)
+      const s = await getStats()
+      setStats(s)
+    }
+    load()
   }, [])
 
-  const refreshData = () => {
-    const data = getSavedBusinesses()
+  const refreshData = async () => {
+    const data = await getBusinesses()
     setBusinesses(data)
-    setStats(getStats())
+    const s = await getStats()
+    setStats(s)
   }
 
   const categories = useMemo(() => {
@@ -105,15 +110,15 @@ export default function DatabasePage() {
         if (!match) return false
       }
       if (categoryFilter !== "all" && b.category !== categoryFilter) return false
-      if (filter === "website") return b.webPresence === "website"
+      if (filter === "website") return b.web_presence === "website"
       if (filter === "facebook-only")
-        return b.webPresence === "facebook-only" || b.webPresence === "social-only"
-      if (filter === "no-presence") return b.webPresence === "none"
+        return b.web_presence === "facebook-only" || b.web_presence === "social-only"
+      if (filter === "no-presence") return b.web_presence === "none"
       if (filter === "analyzed") return !!b.analysis
-      if (filter === "yellow-pages") return !!b.analysis?.isYellowPages
-      if (filter === "prospects") return !!b.isProspect
-      if (filter === "priority") return !!b.isPriority
-      if (filter === "dismissed") return !!b.isDismissed
+      if (filter === "yellow-pages") return !!(b.analysis as any)?.isYellowPages
+      if (filter === "prospects") return b.status === "prospect"
+      if (filter === "priority") return b.status === "priority"
+      if (filter === "dismissed") return b.status === "dismissed"
       return true
     })
 
@@ -123,8 +128,8 @@ export default function DatabasePage() {
       if (sortBy === "date") return new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime()
       if (sortBy === "category") return (a.category || "zzz").localeCompare(b.category || "zzz")
       if (sortBy === "presence") {
-        const order = { none: 0, "social-only": 1, "facebook-only": 2, website: 3 }
-        return (order[a.webPresence] || 0) - (order[b.webPresence] || 0)
+        const order: Record<string, number> = { none: 0, "social-only": 1, "facebook-only": 2, website: 3 }
+        return (order[a.web_presence] || 0) - (order[b.web_presence] || 0)
       }
       return 0
     })
@@ -143,10 +148,11 @@ export default function DatabasePage() {
     URL.revokeObjectURL(url)
   }
 
-  const handleClear = () => {
-    clearProjectData()
+  const handleClear = async () => {
+    await clearProjectData()
     setBusinesses([])
-    setStats(getStats())
+    const s = await getStats()
+    setStats(s)
     setShowClearConfirm(false)
   }
 

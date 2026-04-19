@@ -10,21 +10,21 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Search, Globe, XCircle, Facebook, Download, SearchCheck, ScanSearch, Paintbrush, Bot } from "lucide-react"
-import { getSavedBusinesses, exportToCSV, SERVICE_TAGS, type SavedBusiness } from "@/lib/storage"
+import { getBusinesses, exportToCSV, SERVICE_TAGS, type DbBusiness } from "@/lib/db"
 
 type FilterType = "all" | "website" | "facebook-only" | "no-presence"
 
 export default function ServicesPage() {
-  const [allBusinesses, setAllBusinesses] = useState<SavedBusiness[]>([])
+  const [allBusinesses, setAllBusinesses] = useState<DbBusiness[]>([])
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
   const [serviceFilter, setServiceFilter] = useState("all")
 
-  const loadData = () => {
-    const data = getSavedBusinesses().filter((b) =>
-      b.serviceTags?.length || b.needsSEO
+  const loadData = async () => {
+    const data = (await getBusinesses()).filter((b) =>
+      b.service_tags?.length || b.needs_seo
     )
     setAllBusinesses(data)
   }
@@ -39,11 +39,12 @@ export default function ServicesPage() {
     const counts: Record<string, number> = {}
     for (const tag of SERVICE_TAGS) {
       counts[tag.id] = allBusinesses.filter((b) =>
-        b.serviceTags?.includes(tag.id) || (tag.id === "pitch-seo" && b.needsSEO)
+        b.service_tags?.includes(tag.id) || (tag.id === "pitch-seo" && b.needs_seo)
       ).length
     }
     return counts
   }, [allBusinesses])
+
 
   const filtered = useMemo(() => {
     let result = allBusinesses.filter((b) => {
@@ -56,18 +57,18 @@ export default function ServicesPage() {
       }
       if (categoryFilter !== "all" && b.category !== categoryFilter) return false
       if (serviceFilter !== "all") {
-        const tags = b.serviceTags || (b.needsSEO ? ["pitch-seo"] : [])
+        const tags = b.service_tags || (b.needs_seo ? ["pitch-seo"] : [])
         if (!tags.includes(serviceFilter)) return false
       }
-      if (filter === "website") return b.webPresence === "website"
-      if (filter === "facebook-only") return b.webPresence === "facebook-only" || b.webPresence === "social-only"
-      if (filter === "no-presence") return b.webPresence === "none"
+      if (filter === "website") return b.web_presence === "website"
+      if (filter === "facebook-only") return b.web_presence === "facebook-only" || b.web_presence === "social-only"
+      if (filter === "no-presence") return b.web_presence === "none"
       return true
     })
     result.sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name)
       if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0)
-      if (sortBy === "date") return new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime()
+      if (sortBy === "date") return new Date(b.saved_at || 0).getTime() - new Date(a.saved_at || 0).getTime()
       return 0
     })
     return result

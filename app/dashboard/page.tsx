@@ -9,32 +9,32 @@ import {
   Globe, XCircle, Facebook, Star, Flame, Ban, SearchCheck,
   Building2, BarChart3, Paintbrush, Bot, Search as SearchIcon, Trash2,
 } from "lucide-react"
-import { getSavedBusinesses, getStats, getReports, clearProjectData, SERVICE_TAGS, type SavedBusiness } from "@/lib/storage"
+import { getBusinesses, getStats, getReports, clearProjectData, SERVICE_TAGS, type DbBusiness } from "@/lib/db"
 import Link from "next/link"
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<ReturnType<typeof getStats> | null>(null)
-  const [businesses, setBusinesses] = useState<SavedBusiness[]>([])
+  const [stats, setStats] = useState<Awaited<ReturnType<typeof getStats>> | null>(null)
+  const [businesses, setBusinesses] = useState<DbBusiness[]>([])
   const [recentSearches, setRecentSearches] = useState<{ query: string; date: string; count: number }[]>([])
   const [topCategories, setTopCategories] = useState<{ name: string; count: number }[]>([])
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
-  const loadData = () => {
-    const s = getStats()
-    const b = getSavedBusinesses()
-    const r = getReports()
+  const loadData = async () => {
+    const s = await getStats()
+    const b = await getBusinesses()
+    const r = await getReports()
     setStats(s)
     setBusinesses(b)
 
     const seen = new Set<string>()
-    const recent = r.filter((rep) => {
-      if (seen.has(rep.searchQuery)) return false
-      seen.add(rep.searchQuery)
+    const recent = r.filter((rep: any) => {
+      if (seen.has(rep.search_query)) return false
+      seen.add(rep.search_query)
       return true
-    }).slice(0, 5).map((rep) => ({
-      query: rep.searchQuery,
-      date: new Date(rep.date).toLocaleDateString(),
-      count: rep.businessCount,
+    }).slice(0, 5).map((rep: any) => ({
+      query: rep.search_query,
+      date: new Date(rep.created_at).toLocaleDateString(),
+      count: rep.business_count,
     }))
     setRecentSearches(recent)
 
@@ -52,20 +52,20 @@ export default function DashboardPage() {
 
   useEffect(() => { loadData() }, [])
 
-  const handleClear = () => {
-    clearProjectData()
+  const handleClear = async () => {
+    await clearProjectData()
     setShowClearConfirm(false)
-    loadData()
+    await loadData()
   }
 
   if (!stats) return null
 
   const untouched = stats.total - stats.prospects - stats.priority - stats.dismissed
   const serviceTagCounts = businesses.reduce((acc, b) => {
-    for (const tag of (b.serviceTags || [])) {
+    for (const tag of (b.service_tags || [])) {
       acc[tag] = (acc[tag] || 0) + 1
     }
-    if (b.needsSEO && !b.serviceTags?.includes("pitch-seo")) {
+    if (b.needs_seo && !b.service_tags?.includes("pitch-seo")) {
       acc["pitch-seo"] = (acc["pitch-seo"] || 0) + 1
     }
     return acc
@@ -73,8 +73,8 @@ export default function DashboardPage() {
 
   // Pipeline counts
   const pipelineCounts = businesses.reduce((acc, b) => {
-    if (b.pipelineStage && b.pipelineStage !== "none") {
-      acc[b.pipelineStage] = (acc[b.pipelineStage] || 0) + 1
+    if (b.pipeline_stage && b.pipeline_stage !== "none") {
+      acc[b.pipeline_stage] = (acc[b.pipeline_stage] || 0) + 1
     }
     return acc
   }, {} as Record<string, number>)

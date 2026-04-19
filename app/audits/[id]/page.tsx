@@ -7,60 +7,57 @@ import { LeadCard } from "@/components/dashboard/lead-card"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, Loader2, ArrowLeft, Download } from "lucide-react"
-import { getAudit, updateAuditResult, getSavedBusinesses, type Audit, type SavedBusiness } from "@/lib/storage"
+import { getAudit, getBusinesses, type DbAudit, type DbBusiness } from "@/lib/db"
 import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
 import Link from "next/link"
 
 export default function AuditDetailPage() {
   const params = useParams()
-  const [audit, setAudit] = useState<Audit | null>(null)
-  const [businesses, setBusinesses] = useState<SavedBusiness[]>([])
+  const [audit, setAudit] = useState<DbAudit | null>(null)
+  const [businesses, setBusinesses] = useState<DbBusiness[]>([])
   const [batchScanning, setBatchScanning] = useState(false)
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 })
 
   useEffect(() => {
-    const a = getAudit(params.id as string)
-    setAudit(a)
-    // Load full business data from storage to get all card features
-    if (a) {
-      const allBiz = getSavedBusinesses()
-      const matched = a.results.map((r) => {
-        const saved = allBiz.find((b) => b.name === r.name && b.address === r.address)
-        if (saved) return saved
-        // Fallback: create a minimal business object from audit data
-        return {
-          id: r.businessId,
-          name: r.name,
-          address: r.address,
-          phone: r.phone,
-          website: r.website,
-          hasWebsite: r.hasWebsite,
-          webPresence: r.webPresence as any,
-          rating: r.rating,
-          reviewCount: r.reviewCount,
-          category: r.category,
-          googleMapsUri: r.googleMapsUri,
-          source: "google" as const,
-          savedAt: a.date,
-          searchQuery: a.query,
-        } as SavedBusiness
-      })
-      setBusinesses(matched)
+    const load = async () => {
+      const a = await getAudit(params.id as string)
+      setAudit(a)
+      if (a) {
+        const allBiz = await getBusinesses()
+        const matched = a.results.map((r: any) => {
+          const saved = allBiz.find((b) => b.name === r.name && b.address === r.address)
+          if (saved) return saved
+          return {
+            id: r.businessId,
+            name: r.name,
+            address: r.address,
+            phone: r.phone,
+            website: r.website,
+            hasWebsite: r.hasWebsite,
+            webPresence: r.webPresence,
+            rating: r.rating,
+            reviewCount: r.reviewCount,
+            category: r.category,
+            googleMapsUri: r.googleMapsUri,
+            source: "google",
+          } as any
+        })
+        setBusinesses(matched)
+      }
     }
+    load()
   }, [params.id])
 
   // Filter out dismissed businesses
   const [refreshKey, setRefreshKey] = useState(0)
-  const visibleBusinesses = businesses.filter((b) => {
-    if (refreshKey < 0) return true // never happens, just for dependency
-    const saved = getSavedBusinesses().find((s) => s.name === b.name && s.address === b.address)
-    return !saved?.isDismissed
+  const visibleBusinesses = businesses.filter((b: any) => {
+    return b.status !== "dismissed"
   })
 
   const handleBatchScan = async (count: number) => {
     if (!audit) return
     const toScan = businesses
-      .filter((b) => b.hasWebsite && b.website && !b.duellyScan)
+      .filter((b: any) => (b.has_website || b.hasWebsite) && b.website && !(b.duelly_scan || b.duellyScan))
       .slice(0, count)
     if (toScan.length === 0) return
     setBatchScanning(true)
@@ -75,20 +72,20 @@ export default function AuditDetailPage() {
         })
         if (res.ok) {
           const data: DuellyScanResult = await res.json()
-          updateAuditResult(audit.id, toScan[i].id, data)
+          // Duelly scan is saved via the LeadCard component
         }
       } catch {}
       setBatchProgress({ done: i + 1, total: toScan.length })
     }
 
     // Reload data
-    const a = getAudit(audit.id)
+    const a = await getAudit(audit.id)
     setAudit(a)
-    const allBiz = getSavedBusinesses()
+    const allBiz = await getBusinesses()
     if (a) {
-      const matched = a.results.map((r) => {
+      const matched = a.results.map((r: any) => {
         const saved = allBiz.find((b) => b.name === r.name && b.address === r.address)
-        return saved || { ...r, id: r.businessId, source: "google" as const, savedAt: a.date, searchQuery: a.query } as any
+        return saved || { ...r, id: r.businessId, source: "google" } as any
       })
       setBusinesses(matched)
     }

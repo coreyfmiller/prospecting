@@ -28,8 +28,7 @@ import {
   Ban,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
-import { saveBusinesses, ensureProject, getSavedBusinesses } from "@/lib/storage"
-import { saveAudit, type Audit, type AuditResult } from "@/lib/storage"
+import { saveBusinesses as dbSaveBusinesses, ensureProject, getBusinesses, saveAudit as dbSaveAudit, getActiveProjectId } from "@/lib/db"
 import { isBlocked, isBlockChainsEnabled, setBlockChainsEnabled } from "@/lib/blocklist"
 
 const CATEGORIES = [
@@ -78,7 +77,7 @@ export default function Dashboard() {
   const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 })
 
   useEffect(() => {
-    ensureProject()
+    ensureProject().catch(console.error)
     setBlockChains(isBlockChainsEnabled())
   }, [])
 
@@ -108,8 +107,8 @@ export default function Dashboard() {
         })
         if (res.ok) {
           const data = await res.json()
-          const { saveAnalysis } = await import("@/lib/storage")
-          saveAnalysis(toAnalyze[i].id, data)
+          const { saveAnalysis: dbSave } = await import("@/lib/db")
+          dbSave(toAnalyze[i].id, data)
           // Update the card in real time
           setBusinesses((prev) =>
             prev.map((b) =>
@@ -166,43 +165,43 @@ export default function Dashboard() {
         noPresence: unblocked.filter((b: Business) => b.webPresence === "none").length,
       })
 
-      // Auto-save to localStorage
-      const { newCount, updatedCount } = saveBusinesses(
+      // Auto-save to Supabase
+      const { newCount, updatedCount } = await dbSaveBusinesses(
         unblocked,
         location.trim(),
         category
       )
       setSaveInfo(`Saved ${newCount} new, updated ${updatedCount} existing${blocked > 0 ? `, ${blocked} chains filtered` : ""}`)
 
-      // Save audit from Google Places results
+      // Save audit
       const searchQuery = category && category !== "all"
         ? `${category} in ${location.trim()}`
         : `businesses in ${location.trim()}`
       try {
-        ensureProject()
-        const auditResults: AuditResult[] = unblocked.map((b: Business, idx: number) => ({
-          businessId: b.id,
-          name: b.name,
-          address: b.address,
-          phone: b.phone,
-          website: b.website,
-          hasWebsite: b.hasWebsite,
-          webPresence: b.webPresence,
-          position: idx + 1,
-          rating: b.rating,
-          reviewCount: b.reviewCount,
-          category: b.category,
-          googleMapsUri: b.googleMapsUri,
-        }))
-        saveAudit({
-          id: crypto.randomUUID(),
-          query: searchQuery,
-          location: location.trim(),
-          category: category || "All categories",
-          date: new Date().toISOString(),
-          results: auditResults,
-        })
-        setSaveInfo((prev) => (prev || "") + ` · Audit saved (${auditResults.length} businesses)`)
+        const pid = getActiveProjectId()
+        if (pid) {
+          const auditResults = unblocked.map((b: Business, idx: number) => ({
+            businessId: b.id,
+            name: b.name,
+            address: b.address,
+            phone: b.phone,
+            website: b.website,
+            hasWebsite: b.hasWebsite,
+            webPresence: b.webPresence,
+            rating: b.rating,
+            reviewCount: b.reviewCount,
+            category: b.category,
+            googleMapsUri: b.googleMapsUri,
+          }))
+          await dbSaveAudit({
+            project_id: pid,
+            query: searchQuery,
+            location: location.trim(),
+            category: category || "All categories",
+            results: auditResults,
+          })
+          setSaveInfo((prev) => (prev || "") + ` · Audit saved (${auditResults.length} businesses)`)
+        }
       } catch (e) {
         console.error("Audit save failed:", e)
       }
@@ -214,16 +213,22 @@ export default function Dashboard() {
     }
   }
 
-  // Get dismissed businesses to filter them out — match by name+address since IDs may differ
+  // Get dismissed businesses to filter them out
   const [dismissRefresh, setDismissRefresh] = useState(0)
-  const savedBusinesses = dismissRefresh >= 0 ? getSavedBusinesses() : []
-  const dismissedKeys = new Set(
-    hideDismissed
-      ? savedBusinesses
-          .filter((b) => b.isDismissed)
-          .map((b) => (b.name + "|" + b.address).toLowerCase())
-      : []
-  )
+  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (hideDismissed) {
+      getBusinesses().then((saved) => {
+        const keys = new Set(
+          saved.filter((b) => b.status === "dismissed").map((b) => (b.name + "|" + b.address).toLowerCase())
+        )
+        setDismissedKeys(keys)
+      })
+    } else {
+      setDismissedKeys(new Set())
+    }
+  }, [hideDismissed, dismissRefresh])
 
   const filtered = businesses.filter((b) => {
     if (hideDismissed && dismissedKeys.has((b.name + "|" + b.address).toLowerCase())) return false

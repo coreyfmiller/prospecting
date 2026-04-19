@@ -6,20 +6,25 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ClipboardList, Search, Calendar, MapPin, ChevronRight, Trash2 } from "lucide-react"
-import { getAudits, deleteAudit, type Audit } from "@/lib/storage"
+import { getAudits, deleteAudit, type DbAudit } from "@/lib/db"
 import Link from "next/link"
 
 export default function AuditsPage() {
-  const [audits, setAudits] = useState<Audit[]>([])
+  const [audits, setAudits] = useState<DbAudit[]>([])
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  useEffect(() => { setAudits(getAudits()) }, [])
+  const loadData = async () => {
+    setAudits(await getAudits())
+  }
 
-  const handleDelete = (id: string) => {
-    deleteAudit(id)
-    setAudits(getAudits())
+  useEffect(() => { loadData() }, [])
+
+  const handleDelete = async (id: string) => {
+    await deleteAudit(id)
+    setAudits(await getAudits())
     setDeleteConfirm(null)
   }
+
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -46,8 +51,8 @@ export default function AuditsPage() {
           ) : (
             <div className="space-y-3">
               {audits.map((audit) => {
-                const withWebsite = audit.results.filter((r) => r.hasWebsite).length
-                const scanned = audit.results.filter((r) => r.duellyScan).length
+                const withWebsite = audit.results.filter((r: any) => r.hasWebsite).length
+                const scanned = audit.results.filter((r: any) => r.duellyScan).length
                 return (
                   <Link key={audit.id} href={`/audits/${audit.id}`}>
                     <Card className="hover:border-primary/30 transition-colors cursor-pointer">
@@ -59,7 +64,7 @@ export default function AuditsPage() {
                               <MapPin className="w-3 h-3" /> {audit.location}
                             </span>
                             <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" /> {new Date(audit.date).toLocaleDateString()}
+                              <Calendar className="w-3 h-3" /> {new Date(audit.created_at).toLocaleDateString()}
                             </span>
                           </div>
                         </div>

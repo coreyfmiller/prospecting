@@ -23,22 +23,22 @@ import {
   ScanSearch,
 } from "lucide-react"
 import {
-  getSavedBusinesses,
+  getBusinesses,
   exportToCSV,
-  type SavedBusiness,
-} from "@/lib/storage"
+  type DbBusiness,
+} from "@/lib/db"
 
 type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed"
 
 export default function ProspectsPage() {
-  const [allBusinesses, setAllBusinesses] = useState<SavedBusiness[]>([])
+  const [allBusinesses, setAllBusinesses] = useState<DbBusiness[]>([])
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
 
-  const loadData = () => {
-    const data = getSavedBusinesses().filter((b) => b.isProspect)
+  const loadData = async () => {
+    const data = (await getBusinesses()).filter((b) => b.status === "prospect")
     setAllBusinesses(data)
   }
 
@@ -51,11 +51,12 @@ export default function ProspectsPage() {
 
   const stats = useMemo(() => ({
     total: allBusinesses.length,
-    withWebsite: allBusinesses.filter((b) => b.webPresence === "website").length,
-    facebookOnly: allBusinesses.filter((b) => b.webPresence === "facebook-only" || b.webPresence === "social-only").length,
-    noPresence: allBusinesses.filter((b) => b.webPresence === "none").length,
+    withWebsite: allBusinesses.filter((b) => b.web_presence === "website").length,
+    facebookOnly: allBusinesses.filter((b) => b.web_presence === "facebook-only" || b.web_presence === "social-only").length,
+    noPresence: allBusinesses.filter((b) => b.web_presence === "none").length,
     analyzed: allBusinesses.filter((b) => b.analysis).length,
   }), [allBusinesses])
+
 
   const filtered = useMemo(() => {
     let result = allBusinesses.filter((b) => {
@@ -70,16 +71,16 @@ export default function ProspectsPage() {
         if (!match) return false
       }
       if (categoryFilter !== "all" && b.category !== categoryFilter) return false
-      if (filter === "website") return b.webPresence === "website"
-      if (filter === "facebook-only") return b.webPresence === "facebook-only" || b.webPresence === "social-only"
-      if (filter === "no-presence") return b.webPresence === "none"
+      if (filter === "website") return b.web_presence === "website"
+      if (filter === "facebook-only") return b.web_presence === "facebook-only" || b.web_presence === "social-only"
+      if (filter === "no-presence") return b.web_presence === "none"
       if (filter === "analyzed") return !!b.analysis
       return true
     })
     result.sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name)
       if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0)
-      if (sortBy === "date") return new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime()
+      if (sortBy === "date") return new Date(b.saved_at || 0).getTime() - new Date(a.saved_at || 0).getTime()
       return 0
     })
     return result
