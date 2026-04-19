@@ -45,7 +45,7 @@ function classifyPresence(website?: string, facebook?: string): WebPresence {
 
 export async function POST(req: NextRequest) {
   try {
-    const { query, location, category } = await req.json()
+    const { query, location, category, radius } = await req.json()
 
     if (!query && !location) {
       return NextResponse.json(
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         : query || `businesses in ${location}`
 
     const [googleResults, perplexityResults] = await Promise.allSettled([
-      searchGooglePlaces(searchText, location),
+      searchGooglePlaces(searchText, location, radius),
       // Perplexity disabled for now
       // searchPerplexity(searchText),
       Promise.resolve([]),
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function searchGooglePlaces(query: string, location?: string): Promise<Business[]> {
+async function searchGooglePlaces(query: string, location?: string, radiusKm?: number): Promise<Business[]> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY
   if (!apiKey) throw new Error("Google Places API key not configured")
 
@@ -118,7 +118,7 @@ async function searchGooglePlaces(query: string, location?: string): Promise<Bus
           locationBias = {
             circle: {
               center: { latitude: loc.latitude, longitude: loc.longitude },
-              radius: 15000,
+              radius: (radiusKm || 15) * 1000,
             },
           }
         }

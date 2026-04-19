@@ -62,6 +62,7 @@ type FilterType = "all" | "website" | "facebook-only" | "no-presence"
 export default function Dashboard() {
   const [location, setLocation] = useState("")
   const [category, setCategory] = useState("")
+  const [radius, setRadius] = useState("15")
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -142,7 +143,7 @@ export default function Dashboard() {
       const res = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ location: location.trim(), category }),
+        body: JSON.stringify({ location: location.trim(), category, radius: parseInt(radius) }),
       })
 
       if (!res.ok) {
@@ -267,6 +268,20 @@ export default function Dashboard() {
                       {cat}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={radius} onValueChange={setRadius}>
+                <SelectTrigger className="sm:w-32">
+                  <SelectValue placeholder="Radius" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 km</SelectItem>
+                  <SelectItem value="10">10 km</SelectItem>
+                  <SelectItem value="15">15 km</SelectItem>
+                  <SelectItem value="25">25 km</SelectItem>
+                  <SelectItem value="50">50 km</SelectItem>
+                  <SelectItem value="100">100 km</SelectItem>
                 </SelectContent>
               </Select>
 
