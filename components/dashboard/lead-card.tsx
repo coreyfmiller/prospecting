@@ -768,7 +768,9 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
           </div>
 
           {/* Pipeline Stage */}
-          <div className="grid grid-cols-5 gap-1">
+          <div className="border-t border-border/50 pt-2 mt-1">
+            <p className="text-xs text-muted-foreground mb-1.5">Pipeline</p>
+            <div className="grid grid-cols-5 gap-1">
             {(["contacted", "meeting", "proposal", "won", "lost"] as PipelineStage[]).map((s) => {
               const config: Record<string, { label: string; color: string; active: string }> = {
                 contacted: { label: "Contacted", color: "bg-muted/50 text-muted-foreground", active: "bg-blue-500 text-white" },
@@ -792,6 +794,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
                 </button>
               )
             })}
+          </div>
           </div>
         </div>
 
