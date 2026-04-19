@@ -276,12 +276,10 @@ export default function Dashboard() {
                   <SelectValue placeholder="Radius" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="5">5 km</SelectItem>
                   <SelectItem value="10">10 km</SelectItem>
                   <SelectItem value="15">15 km</SelectItem>
                   <SelectItem value="25">25 km</SelectItem>
                   <SelectItem value="50">50 km</SelectItem>
-                  <SelectItem value="100">100 km</SelectItem>
                 </SelectContent>
               </Select>
 
