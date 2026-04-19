@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         : query || `businesses in ${location}`
 
     const [googleResults, perplexityResults] = await Promise.allSettled([
-      searchGooglePlaces(searchText),
+      searchGooglePlaces(searchText, location),
       // Perplexity disabled for now
       // searchPerplexity(searchText),
       Promise.resolve([]),
@@ -91,9 +91,40 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function searchGooglePlaces(query: string): Promise<Business[]> {
+async function searchGooglePlaces(query: string, location?: string): Promise<Business[]> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY
   if (!apiKey) throw new Error("Google Places API key not configured")
+
+  // Geocode the location using Places Text Search to get coordinates
+  let locationBias: any = undefined
+  if (location) {
+    try {
+      const geoRes = await fetch(
+        "https://places.googleapis.com/v1/places:searchText",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "places.location",
+          },
+          body: JSON.stringify({ textQuery: location, maxResultCount: 1 }),
+        }
+      )
+      if (geoRes.ok) {
+        const geoData = await geoRes.json()
+        const loc = geoData.places?.[0]?.location
+        if (loc) {
+          locationBias = {
+            circle: {
+              center: { latitude: loc.latitude, longitude: loc.longitude },
+              radius: 30000,
+            },
+          }
+        }
+      }
+    } catch {}
+  }
 
   const allResults: Business[] = []
   let pageToken: string | undefined
@@ -105,6 +136,7 @@ async function searchGooglePlaces(query: string): Promise<Business[]> {
       maxResultCount: 20,
     }
     if (pageToken) body.pageToken = pageToken
+    if (locationBias && !pageToken) body.locationBias = locationBias
 
     const response = await fetch(
       "https://places.googleapis.com/v1/places:searchText",
