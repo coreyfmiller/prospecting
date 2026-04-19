@@ -11,12 +11,25 @@ export interface DuellyScanResult {
   scannedAt?: string
 }
 
+// Simple in-memory rate limiter
+const lastScanTime = new Map<string, number>()
+const COOLDOWN_MS = 30000
+
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json()
     if (!url) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 })
     }
+
+    // Rate limit check
+    const now = Date.now()
+    const lastScan = lastScanTime.get(url) || 0
+    if (now - lastScan < COOLDOWN_MS) {
+      const waitSecs = Math.ceil((COOLDOWN_MS - (now - lastScan)) / 1000)
+      return NextResponse.json({ error: `Please wait ${waitSecs}s before scanning again` }, { status: 429 })
+    }
+    lastScanTime.set(url, now)
 
     const apiUrl = process.env.DUELLY_API_URL
     const apiKey = process.env.DUELLY_API_KEY

@@ -70,6 +70,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [duellyScan, setDuellyScan] = useState<DuellyScanResult | null>(business.duellyScan || null)
   const [scanningDuelly, setScanningDuelly] = useState(false)
   const [duellyError, setDuellyError] = useState<string | null>(null)
+  const [duellyCooldown, setDuellyCooldown] = useState(0)
   const [gbpAudit, setGbpAudit] = useState<GBPAudit | null>(business.gbpAudit || null)
   const [scanningGBP, setScanningGBP] = useState(false)
 
@@ -132,7 +133,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   }
 
   const handleDuellyScan = async () => {
-    if (!business.website) return
+    if (!business.website || duellyCooldown > 0) return
     setScanningDuelly(true)
     setDuellyError(null)
     try {
@@ -152,6 +153,14 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
       setDuellyError(err.message || "Duelly scan failed")
     }
     setScanningDuelly(false)
+    // Start 30 second cooldown
+    setDuellyCooldown(30)
+    const interval = setInterval(() => {
+      setDuellyCooldown((prev) => {
+        if (prev <= 1) { clearInterval(interval); return 0 }
+        return prev - 1
+      })
+    }, 1000)
   }
 
   const handleGBPAudit = async () => {
@@ -479,13 +488,15 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
         {canAnalyze && (
           <Button
             onClick={handleDuellyScan}
-            disabled={scanningDuelly}
+            disabled={scanningDuelly || duellyCooldown > 0}
             variant="outline"
             size="sm"
             className="w-full gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
           >
             {scanningDuelly ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Running Duelly scan...</>
+            ) : duellyCooldown > 0 ? (
+              <>Cooldown {duellyCooldown}s</>
             ) : (
               <><TrendingUp className="w-4 h-4" /> {duellyScan ? "Rescan with Duelly" : "Duelly Scan"}</>
             )}
