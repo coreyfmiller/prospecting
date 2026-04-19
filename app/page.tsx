@@ -254,7 +254,7 @@ export default function Dashboard() {
               <div className="relative flex-1">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="City, state or zip (e.g. Dallas, TX)"
+                  placeholder="City, State/Province (e.g. Dallas, TX)"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
