@@ -75,6 +75,10 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [gbpAudit, setGbpAudit] = useState<GBPAudit | null>(business.gbpAudit || null)
   const [scanningGBP, setScanningGBP] = useState(false)
   const [generatingReport, setGeneratingReport] = useState(false)
+  const [showEmailModal, setShowEmailModal] = useState(false)
+  const [emailDraft, setEmailDraft] = useState("")
+  const [emailPitchType, setEmailPitchType] = useState("general")
+  const [generatingEmail, setGeneratingEmail] = useState(false)
 
   const presence = presenceConfig[business.webPresence]
   const PresenceIcon = presence.icon
@@ -207,6 +211,28 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
       }
     } catch {}
     setGeneratingReport(false)
+  }
+
+  const handleGenerateEmail = async (pitchType: string) => {
+    setGeneratingEmail(true)
+    setEmailPitchType(pitchType)
+    try {
+      const companyName = typeof window !== "undefined" ? localStorage.getItem("marketmojo_company_name") : null
+      const res = await fetch("/api/generate-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business: { ...business, analysis, duellyScan, gbpAudit },
+          pitchType,
+          companyName,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setEmailDraft(data.email)
+      }
+    } catch {}
+    setGeneratingEmail(false)
   }
 
   const handleToggleProspect = () => {
@@ -781,21 +807,31 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
             />
           </div>
         )}
-        {/* Generate Report */}
+        {/* Generate Report & Draft Email */}
         {(analysis || gbpAudit || duellyScan) && (
-          <Button
-            onClick={handleGenerateReport}
-            disabled={generatingReport}
-            variant="outline"
-            size="sm"
-            className="w-full gap-2"
-          >
-            {generatingReport ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Generating report...</>
-            ) : (
-              <><FileText className="w-4 h-4" /> Generate Audit Report</>
-            )}
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              onClick={handleGenerateReport}
+              disabled={generatingReport}
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+            >
+              {generatingReport ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <><FileText className="w-3.5 h-3.5" /> Report</>
+              )}
+            </Button>
+            <Button
+              onClick={() => setShowEmailModal(true)}
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+            >
+              <Mail className="w-3.5 h-3.5" /> Draft Email
+            </Button>
+          </div>
         )}
 
       </CardContent>
@@ -812,6 +848,68 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
               <Button variant="outline" size="sm" onClick={() => setShowDismissConfirm(false)}>Cancel</Button>
               <Button variant="destructive" size="sm" onClick={confirmDismiss}>Dismiss</Button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Email Draft Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowEmailModal(false)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-lg w-full mx-4 shadow-lg max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-foreground mb-1">Draft Email for {business.name}</h3>
+            <p className="text-xs text-muted-foreground mb-4">Select a pitch type and AI will generate a personalized email</p>
+
+            <div className="flex gap-2 mb-4">
+              {[
+                { id: "design", label: "Design" },
+                { id: "seo", label: "SEO" },
+                { id: "chatbot", label: "AI Chatbot" },
+                { id: "general", label: "General" },
+              ].map((type) => (
+                <Button
+                  key={type.id}
+                  variant={emailPitchType === type.id && emailDraft ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleGenerateEmail(type.id)}
+                  disabled={generatingEmail}
+                >
+                  {generatingEmail && emailPitchType === type.id ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    type.label
+                  )}
+                </Button>
+              ))}
+            </div>
+
+            {emailDraft && (
+              <div className="space-y-3">
+                <textarea
+                  value={emailDraft}
+                  onChange={(e) => setEmailDraft(e.target.value)}
+                  className="w-full text-sm p-3 rounded-md border border-border bg-background text-foreground min-h-[200px] resize-y focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(emailDraft)
+                    }}
+                  >
+                    Copy to Clipboard
+                  </Button>
+                  <Button size="sm" onClick={() => setShowEmailModal(false)}>
+                    Done
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {!emailDraft && !generatingEmail && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Click a pitch type above to generate an email
+              </p>
+            )}
           </div>
         </div>
       )}
