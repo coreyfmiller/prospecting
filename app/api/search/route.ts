@@ -118,7 +118,7 @@ async function searchGooglePlaces(query: string, location?: string): Promise<Bus
           locationBias = {
             circle: {
               center: { latitude: loc.latitude, longitude: loc.longitude },
-              radius: 30000,
+              radius: 15000,
             },
           }
         }
