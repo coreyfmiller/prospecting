@@ -409,3 +409,116 @@ export function exportToCSV(businesses: DbBusiness[]): string {
 export function getStorageUsage() {
   return { usedMB: 0, totalMB: 999, percent: 0 } // No longer relevant with Supabase
 }
+
+// --- Custom Service Tags ---
+
+export interface CustomServiceTag {
+  id: string
+  user_id: string
+  label: string
+  color: string
+  sort_order: number
+}
+
+export interface CustomPipelineStage {
+  id: string
+  user_id: string
+  label: string
+  color: string
+  sort_order: number
+}
+
+const DEFAULT_SERVICE_TAGS: Omit<CustomServiceTag, "id" | "user_id">[] = [
+  { label: "Pitch Design", color: "bg-pink-500", sort_order: 0 },
+  { label: "Pitch SEO", color: "bg-indigo-500", sort_order: 1 },
+  { label: "Pitch AI Chatbot", color: "bg-cyan-500", sort_order: 2 },
+]
+
+const DEFAULT_PIPELINE_STAGES: Omit<CustomPipelineStage, "id" | "user_id">[] = [
+  { label: "Contacted", color: "bg-blue-500", sort_order: 0 },
+  { label: "Meeting", color: "bg-violet-500", sort_order: 1 },
+  { label: "Proposal", color: "bg-amber-500", sort_order: 2 },
+  { label: "Won", color: "bg-green-600", sort_order: 3 },
+  { label: "Lost", color: "bg-red-500", sort_order: 4 },
+]
+
+export async function getServiceTags(): Promise<CustomServiceTag[]> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data } = await supabase
+    .from("custom_service_tags")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("sort_order")
+
+  if (!data || data.length === 0) {
+    // Seed defaults
+    const defaults = DEFAULT_SERVICE_TAGS.map((t) => ({ ...t, user_id: user.id }))
+    const { data: seeded } = await supabase.from("custom_service_tags").insert(defaults).select()
+    return seeded || []
+  }
+  return data
+}
+
+export async function addServiceTag(label: string, color: string): Promise<CustomServiceTag | null> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const existing = await getServiceTags()
+  const { data } = await supabase.from("custom_service_tags")
+    .insert({ user_id: user.id, label, color, sort_order: existing.length })
+    .select().single()
+  return data
+}
+
+export async function updateServiceTag(id: string, label: string, color: string): Promise<void> {
+  const supabase = getSupabase()
+  await supabase.from("custom_service_tags").update({ label, color }).eq("id", id)
+}
+
+export async function deleteServiceTag(id: string): Promise<void> {
+  const supabase = getSupabase()
+  await supabase.from("custom_service_tags").delete().eq("id", id)
+}
+
+export async function getPipelineStages(): Promise<CustomPipelineStage[]> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data } = await supabase
+    .from("custom_pipeline_stages")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("sort_order")
+
+  if (!data || data.length === 0) {
+    const defaults = DEFAULT_PIPELINE_STAGES.map((s) => ({ ...s, user_id: user.id }))
+    const { data: seeded } = await supabase.from("custom_pipeline_stages").insert(defaults).select()
+    return seeded || []
+  }
+  return data
+}
+
+export async function addPipelineStage(label: string, color: string): Promise<CustomPipelineStage | null> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const existing = await getPipelineStages()
+  const { data } = await supabase.from("custom_pipeline_stages")
+    .insert({ user_id: user.id, label, color, sort_order: existing.length })
+    .select().single()
+  return data
+}
+
+export async function updatePipelineStageConfig(id: string, label: string, color: string): Promise<void> {
+  const supabase = getSupabase()
+  await supabase.from("custom_pipeline_stages").update({ label, color }).eq("id", id)
+}
+
+export async function deletePipelineStage(id: string): Promise<void> {
+  const supabase = getSupabase()
+  await supabase.from("custom_pipeline_stages").delete().eq("id", id)
+}

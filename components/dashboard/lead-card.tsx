@@ -58,9 +58,11 @@ interface LeadCardProps {
   business: CardBusiness
   onProspectChange?: () => void
   onBlock?: (name: string) => void
+  customServiceTags?: { id: string; label: string; color: string }[]
+  customPipelineStages?: { id: string; label: string; color: string }[]
 }
 
-export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps) {
+export function LeadCard({ business, onProspectChange, onBlock, customServiceTags, customPipelineStages }: LeadCardProps) {
   const wp = business.webPresence || "none"
   const presence = presenceConfig[wp] || presenceConfig.none
   const PresenceIcon = presence.icon
@@ -376,37 +378,31 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
           </div>
 
           {/* Service Tags */}
-          <div className="grid grid-cols-3 gap-1.5">
-            {SERVICE_TAGS.map((tag) => (
-              <button key={tag.id} onClick={async () => { const newTags = await dbToggleServiceTag(business.id, tag.id, serviceTags); setServiceTags(newTags); onProspectChange?.() }}
-                className={`text-xs font-medium py-1.5 rounded-md transition-colors ${serviceTags.includes(tag.id) ? `${tag.color} text-white` : "bg-muted/50 text-muted-foreground hover:bg-muted"}`}>
-                {tag.label}
-              </button>
-            ))}
-          </div>
+          {(customServiceTags || SERVICE_TAGS).length > 0 && (
+            <div className={`grid gap-1.5`} style={{ gridTemplateColumns: `repeat(${Math.min((customServiceTags || SERVICE_TAGS).length, 3)}, 1fr)` }}>
+              {(customServiceTags || SERVICE_TAGS).map((tag) => (
+                <button key={tag.id} onClick={async () => { const newTags = await dbToggleServiceTag(business.id, tag.id, serviceTags); setServiceTags(newTags); onProspectChange?.() }}
+                  className={`text-xs font-medium py-1.5 rounded-md transition-colors ${serviceTags.includes(tag.id) ? `${tag.color} text-white` : "bg-muted/50 text-muted-foreground hover:bg-muted"}`}>
+                  {tag.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Pipeline */}
-          <div className="border-t border-border/50 pt-2 mt-1">
-            <p className="text-xs text-muted-foreground mb-1.5">Pipeline</p>
-            <div className="grid grid-cols-5 gap-1">
-              {(["contacted", "meeting", "proposal", "won", "lost"] as PipelineStage[]).map((s) => {
-                const config: Record<string, { label: string; color: string; active: string }> = {
-                  contacted: { label: "Contacted", color: "bg-muted/50 text-muted-foreground", active: "bg-blue-500 text-white" },
-                  meeting: { label: "Meeting", color: "bg-muted/50 text-muted-foreground", active: "bg-violet-500 text-white" },
-                  proposal: { label: "Proposal", color: "bg-muted/50 text-muted-foreground", active: "bg-amber-500 text-white" },
-                  won: { label: "Won", color: "bg-muted/50 text-muted-foreground", active: "bg-green-600 text-white" },
-                  lost: { label: "Lost", color: "bg-muted/50 text-muted-foreground", active: "bg-red-500 text-white" },
-                }
-                const c = config[s]
-                return (
-                  <button key={s} onClick={async () => { const newStage = stage === s ? "none" : s; setStage(newStage); await updatePipelineStage(business.id, newStage) }}
-                    className={`text-xs py-1 rounded-full transition-colors ${stage === s ? c.active : c.color} hover:opacity-80`}>
-                    {c.label}
+          {(customPipelineStages || []).length > 0 && (
+            <div className="border-t border-border/50 pt-2 mt-1">
+              <p className="text-xs text-muted-foreground mb-1.5">Pipeline</p>
+              <div className={`grid gap-1`} style={{ gridTemplateColumns: `repeat(${Math.min((customPipelineStages || []).length, 5)}, 1fr)` }}>
+                {(customPipelineStages || []).map((s) => (
+                  <button key={s.id} onClick={async () => { const newStage = stage === s.id ? "none" : s.id; setStage(newStage as PipelineStage); await updatePipelineStage(business.id, newStage as PipelineStage) }}
+                    className={`text-xs py-1 rounded-full transition-colors ${stage === s.id ? `${s.color} text-white` : "bg-muted/50 text-muted-foreground"} hover:opacity-80`}>
+                    {s.label}
                   </button>
-                )
-              })}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Notes */}
