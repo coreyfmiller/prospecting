@@ -542,7 +542,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
           {scanningGBP ? (
             <><Loader2 className="w-4 h-4 animate-spin" /> Auditing Google Profile...</>
           ) : (
-            <><MapPinned className="w-4 h-4" /> {gbpAudit ? "Re-audit Google Profile" : "GBP Audit"}</>
+            <><MapPinned className="w-4 h-4" /> {gbpAudit ? "Re-audit Google Business" : "Google Business Audit"}</>
           )}
         </Button>
 

@@ -218,23 +218,12 @@ export default function Dashboard() {
     hideDismissed ? getSavedBusinesses().filter((b) => b.isDismissed).map((b) => b.id) : []
   )
 
-  // Merge saved status into displayed businesses for sorting
-  const [sortTrigger, setSortTrigger] = useState(0)
-  const savedData = sortTrigger >= 0 ? getSavedBusinesses() : []
-  const savedMap = new Map(savedData.map((b) => [b.id, b]))
-
   const filtered = businesses.filter((b) => {
     if (hideDismissed && dismissedIds.has(b.id)) return false
     if (filter === "website") return b.webPresence === "website"
     if (filter === "facebook-only") return b.webPresence === "facebook-only" || b.webPresence === "social-only"
     if (filter === "no-presence") return b.webPresence === "none"
     return true
-  }).sort((a, b) => {
-    const sa = savedMap.get(a.id)
-    const sb = savedMap.get(b.id)
-    const scoreA = sa?.isPriority ? 0 : sa?.isProspect ? 1 : sa?.isDismissed ? 3 : 2
-    const scoreB = sb?.isPriority ? 0 : sb?.isProspect ? 1 : sb?.isDismissed ? 3 : 2
-    return scoreA - scoreB
   })
 
   return (
@@ -442,7 +431,7 @@ export default function Dashboard() {
               {/* Results Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((business) => (
-                  <LeadCard key={business.id} business={business} onBlock={handleBlock} onProspectChange={() => setSortTrigger((n) => n + 1)} />
+                  <LeadCard key={business.id} business={business} onBlock={handleBlock} />
                 ))}
               </div>
 
