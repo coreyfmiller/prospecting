@@ -4,8 +4,17 @@ import { useState } from "react"
 import { ThemeToggle } from "./theme-toggle"
 import { ProjectPicker } from "./project-picker"
 import { Button } from "@/components/ui/button"
-import { Zap, Database, Star, Ban, Flame, SearchCheck, Menu, X, Search, LayoutDashboard, ClipboardList } from "lucide-react"
+import { Zap, Database, Star, Ban, Flame, SearchCheck, Menu, X, Search, LayoutDashboard, ClipboardList, LogOut, Settings, User } from "lucide-react"
 import Link from "next/link"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
 
 const NAV_LINKS = [
   { href: "/", label: "Search", icon: Search },
@@ -20,6 +29,14 @@ const NAV_LINKS = [
 
 export function DashboardHeader() {
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/login")
+  }
 
   return (
     <>
@@ -42,7 +59,27 @@ export function DashboardHeader() {
             ))}
           </nav>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <User className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="gap-2">
+                  <Settings className="w-4 h-4" /> Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="gap-2 text-destructive">
+                <LogOut className="w-4 h-4" /> Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </header>
 
       {/* Mobile Menu */}
@@ -68,6 +105,16 @@ export function DashboardHeader() {
                 </Button>
               </Link>
             ))}
+            <div className="border-t border-border mt-2 pt-2">
+              <Link href="/settings" onClick={() => setMobileOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start gap-3">
+                  <Settings className="w-5 h-5" /> Settings
+                </Button>
+              </Link>
+              <Button variant="ghost" className="w-full justify-start gap-3 text-destructive" onClick={handleLogout}>
+                <LogOut className="w-5 h-5" /> Log out
+              </Button>
+            </div>
           </div>
         </div>
       )}
