@@ -99,6 +99,48 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
     // Check final URL for SSL
     if (response.url.startsWith("https")) hasSSL = true
     else if (response.url.startsWith("http:")) hasSSL = false
+
+    // Detect Cloudflare/bot protection
+    const isBotProtected =
+      html.includes("Just a moment") ||
+      html.includes("Attention Required") ||
+      html.includes("cf-browser-verification") ||
+      html.includes("challenge-platform") ||
+      (html.includes("Cloudflare") && html.length < 10000)
+
+    if (isBotProtected) {
+      // Try Google's cached version
+      try {
+        const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`
+        const cacheRes = await fetch(cacheUrl, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+          signal: AbortSignal.timeout(8000),
+        })
+        if (cacheRes.ok) {
+          const cacheHtml = await cacheRes.text()
+          if (!cacheHtml.includes("Just a moment") && cacheHtml.length > 5000) {
+            html = cacheHtml
+            flags.push("Analyzed from Google cache (site has bot protection)")
+          }
+        }
+      } catch {}
+
+      // If cache didn't work, return error
+      if (html.includes("Just a moment") || html.includes("challenge-platform")) {
+        return {
+          isYellowPages: false,
+          isMobileFriendly: false,
+          hasSSL,
+          technologies,
+          flags: ["Bot protection detected"],
+          summary: "This site has Cloudflare or similar bot protection that prevents automated analysis. The site blocks crawlers from viewing its content.",
+          emails: [],
+        }
+      }
+    }
   } catch (err: any) {
     if (err.name === "AbortError") {
       flags.push("Site took too long to respond")
