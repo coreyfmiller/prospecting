@@ -194,12 +194,30 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
     onProspectChange?.()
   }
 
+  const [showDismissConfirm, setShowDismissConfirm] = useState(false)
+  const [dismissed, setDismissedAndHide] = useState(false)
+
   const handleToggleDismiss = () => {
+    if (!isDismissed) {
+      setShowDismissConfirm(true)
+      return
+    }
+    // Undismiss
+    const newVal = toggleDismiss(business.id)
+    setIsDismissed(newVal)
+    onProspectChange?.()
+  }
+
+  const confirmDismiss = () => {
     const newVal = toggleDismiss(business.id)
     setIsDismissed(newVal)
     if (newVal) { setIsProspect(false); setIsPriority(false) }
+    setShowDismissConfirm(false)
+    setDismissedAndHide(true)
     onProspectChange?.()
   }
+
+  if (dismissed) return null
 
   const cardBg = isPriority
     ? "bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-400 dark:ring-amber-700"
@@ -735,6 +753,22 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
           </div>
         )}
       </CardContent>
+
+      {/* Dismiss Confirmation */}
+      {showDismissConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDismissConfirm(false)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-sm mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Dismiss this business?</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              "{business.name}" will be moved to your dismissed list. You can undo this later.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setShowDismissConfirm(false)}>Cancel</Button>
+              <Button variant="destructive" size="sm" onClick={confirmDismiss}>Dismiss</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
