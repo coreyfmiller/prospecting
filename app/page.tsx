@@ -214,14 +214,19 @@ export default function Dashboard() {
     }
   }
 
-  // Get dismissed IDs to filter them out — refreshes when businesses change
+  // Get dismissed businesses to filter them out — match by name+address since IDs may differ
   const [dismissRefresh, setDismissRefresh] = useState(0)
-  const dismissedIds = new Set(
-    hideDismissed && dismissRefresh >= 0 ? getSavedBusinesses().filter((b) => b.isDismissed).map((b) => b.id) : []
+  const savedBusinesses = dismissRefresh >= 0 ? getSavedBusinesses() : []
+  const dismissedKeys = new Set(
+    hideDismissed
+      ? savedBusinesses
+          .filter((b) => b.isDismissed)
+          .map((b) => (b.name + "|" + b.address).toLowerCase())
+      : []
   )
 
   const filtered = businesses.filter((b) => {
-    if (hideDismissed && dismissedIds.has(b.id)) return false
+    if (hideDismissed && dismissedKeys.has((b.name + "|" + b.address).toLowerCase())) return false
     if (filter === "website") return b.webPresence === "website"
     if (filter === "facebook-only") return b.webPresence === "facebook-only" || b.webPresence === "social-only"
     if (filter === "no-presence") return b.webPresence === "none"
