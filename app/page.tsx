@@ -214,9 +214,10 @@ export default function Dashboard() {
     }
   }
 
-  // Get dismissed IDs to filter them out
+  // Get dismissed IDs to filter them out — refreshes when businesses change
+  const [dismissRefresh, setDismissRefresh] = useState(0)
   const dismissedIds = new Set(
-    hideDismissed ? getSavedBusinesses().filter((b) => b.isDismissed).map((b) => b.id) : []
+    hideDismissed && dismissRefresh >= 0 ? getSavedBusinesses().filter((b) => b.isDismissed).map((b) => b.id) : []
   )
 
   const filtered = businesses.filter((b) => {
@@ -444,7 +445,7 @@ export default function Dashboard() {
               {/* Results Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((business) => (
-                  <LeadCard key={business.id} business={business} onBlock={handleBlock} />
+                  <LeadCard key={business.id} business={business} onBlock={handleBlock} onProspectChange={() => setDismissRefresh((n) => n + 1)} />
                 ))}
               </div>
 
