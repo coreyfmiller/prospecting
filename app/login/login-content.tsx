@@ -48,7 +48,7 @@ export default function LoginContent() {
         <div className="text-center">
           <img src="/logo.png" alt="MarketMojo.ai" className="h-12 mx-auto mb-4" />
           <p className="text-sm text-muted-foreground">
-            Local business prospecting & intelligence
+            Local Intelligence. Real Results.
           </p>
         </div>
 

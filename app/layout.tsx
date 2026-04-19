@@ -7,8 +7,8 @@ import './globals.css'
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: 'MarketMojo.ai - Local Business Prospecting & Intelligence',
-  description: 'Find, analyze, and pitch local businesses that need your digital services',
+  title: 'MarketMojo.ai — Local Intelligence. Real Results.',
+  description: 'Find local businesses that need your digital services. Analyze their online presence, generate audit reports, and close more deals.',
   generator: 'v0.app',
   icons: {
     icon: [
