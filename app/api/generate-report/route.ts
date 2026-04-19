@@ -40,7 +40,7 @@ async function generateRecommendations(business: any): Promise<string[]> {
 Based on this business data:
 ${context}
 
-Write 3-5 specific, prioritized "Recommended Next Steps" for this business owner. Each recommendation should:
+Write 5-8 specific, prioritized "Recommended Next Steps" for this business owner. Cover all relevant areas: website, Google Business Profile, SEO, content, and online presence. Each recommendation should:
 - Have a bold title and 1-2 sentence explanation
 - Reference their actual data and scores
 - Be actionable and specific, not generic
