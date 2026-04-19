@@ -49,6 +49,14 @@ export default function AuditDetailPage() {
     }
   }, [params.id])
 
+  // Filter out dismissed businesses
+  const [refreshKey, setRefreshKey] = useState(0)
+  const visibleBusinesses = businesses.filter((b) => {
+    if (refreshKey < 0) return true // never happens, just for dependency
+    const saved = getSavedBusinesses().find((s) => s.name === b.name && s.address === b.address)
+    return !saved?.isDismissed
+  })
+
   const handleBatchScan = async (count: number) => {
     if (!audit) return
     const toScan = businesses
@@ -114,7 +122,7 @@ export default function AuditDetailPage() {
     </div>
   )
 
-  const websiteCount = businesses.filter((b) => b.hasWebsite).length
+  const websiteCount = visibleBusinesses.filter((b) => b.hasWebsite).length
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -128,7 +136,7 @@ export default function AuditDetailPage() {
               </Link>
               <h1 className="text-xl font-bold text-foreground">"{audit.query}"</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {businesses.length} businesses · {websiteCount} with websites · {new Date(audit.date).toLocaleDateString()}
+                {visibleBusinesses.length} businesses · {websiteCount} with websites · {new Date(audit.date).toLocaleDateString()}
               </p>
             </div>
             <Button onClick={handleExport} variant="outline" size="sm" className="gap-1.5 shrink-0">
@@ -138,8 +146,8 @@ export default function AuditDetailPage() {
 
           {/* Business cards - same as rest of site */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {businesses.map((business) => (
-              <LeadCard key={business.id} business={business} />
+            {visibleBusinesses.map((business) => (
+              <LeadCard key={business.id} business={business} onProspectChange={() => setRefreshKey((n) => n + 1)} />
             ))}
           </div>
         </div>
