@@ -29,6 +29,7 @@ import {
   Mail,
   TrendingUp,
   MapPinned,
+  FileText,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
@@ -73,6 +74,7 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
   const [duellyCooldown, setDuellyCooldown] = useState(0)
   const [gbpAudit, setGbpAudit] = useState<GBPAudit | null>(business.gbpAudit || null)
   const [scanningGBP, setScanningGBP] = useState(false)
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   const presence = presenceConfig[business.webPresence]
   const PresenceIcon = presence.icon
@@ -178,6 +180,33 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
       }
     } catch {}
     setScanningGBP(false)
+  }
+
+  const handleGenerateReport = async () => {
+    setGeneratingReport(true)
+    try {
+      const logoUrl = typeof window !== "undefined" ? localStorage.getItem("marketmojo_user_logo") : null
+      const companyName = typeof window !== "undefined" ? localStorage.getItem("marketmojo_company_name") : null
+      const res = await fetch("/api/generate-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business: { ...business, analysis, duellyScan, gbpAudit },
+          companyName,
+          logoUrl,
+        }),
+      })
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `audit-${business.name.replace(/[^a-zA-Z0-9]/g, "-")}.pdf`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } catch {}
+    setGeneratingReport(false)
   }
 
   const handleToggleProspect = () => {
@@ -752,6 +781,23 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
             />
           </div>
         )}
+        {/* Generate Report */}
+        {(analysis || gbpAudit || duellyScan) && (
+          <Button
+            onClick={handleGenerateReport}
+            disabled={generatingReport}
+            variant="outline"
+            size="sm"
+            className="w-full gap-2"
+          >
+            {generatingReport ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Generating report...</>
+            ) : (
+              <><FileText className="w-4 h-4" /> Generate Audit Report</>
+            )}
+          </Button>
+        )}
+
       </CardContent>
 
       {/* Dismiss Confirmation */}
