@@ -24,6 +24,9 @@ const styles = StyleSheet.create({
   recItem: { marginBottom: 10, padding: 10, backgroundColor: "#f8fafc", borderRadius: 4, borderLeft: "3px solid #0d9488" },
   recTitle: { fontSize: 11, fontWeight: "bold", color: "#1a1a1a", marginBottom: 3 },
   recDesc: { fontSize: 9, color: "#555555", lineHeight: 1.4 },
+  serviceItem: { marginBottom: 10, padding: 10, backgroundColor: "#f0fdfa", borderRadius: 4, borderLeft: "3px solid #0d9488" },
+  serviceTitle: { fontSize: 11, fontWeight: "bold", color: "#0d9488", marginBottom: 3 },
+  serviceDesc: { fontSize: 9, color: "#555555", lineHeight: 1.4 },
 })
 
 function getScoreColor(score: number) {
@@ -39,7 +42,7 @@ function getScoreBg(score: number) {
 }
 
 export function AuditReport({ data }: { data: any }) {
-  const { business, companyName, logoUrl, recommendations } = data
+  const { business, companyName, logoUrl, recommendations, servicePitches } = data
   const analysis = business.analysis
   const gbpAudit = business.gbpAudit
   const duellyScan = business.duellyScan
@@ -240,6 +243,19 @@ export function AuditReport({ data }: { data: any }) {
                 ))}
               </View>
             )}
+          </View>
+        )}
+
+        {/* Services We Can Help With */}
+        {servicePitches && servicePitches.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Services We Can Help With</Text>
+            {servicePitches.map((sp: any, i: number) => (
+              <View key={i} style={styles.serviceItem}>
+                <Text style={styles.serviceTitle}>{sp.service}</Text>
+                <Text style={styles.serviceDesc}>{sp.pitch}</Text>
+              </View>
+            ))}
           </View>
         )}
 

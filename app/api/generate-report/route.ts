@@ -64,6 +64,66 @@ No markdown, no backticks, just the JSON array.` }] }],
   }
 }
 
+async function generateServicePitches(business: any): Promise<{ service: string; pitch: string }[]> {
+  const apiKey = process.env.GEMINI_API_KEY
+  const tags = business.serviceTags || []
+  if (!apiKey || tags.length === 0) return []
+
+  const analysis = business.analysis
+  const gbpAudit = business.gbpAudit
+  const duellyScan = business.duellyScan
+
+  let context = `Business: ${business.name}\n`
+  if (business.webPresence === "none") context += "NO website.\n"
+  else if (business.website) context += `Website: ${business.website}\n`
+  if (analysis?.platform) context += `Platform: ${analysis.platform}\n`
+  if (analysis?.estimatedAge) context += `Age: ${analysis.estimatedAge}\n`
+  if (analysis?.aiAssessment) context += `Health: ${analysis.aiAssessment.score}/10\n`
+  if (gbpAudit) context += `GBP: ${gbpAudit.completenessScore}/100\n`
+  if (duellyScan) context += `SEO: ${duellyScan.seoScore}, GEO: ${duellyScan.geoScore}, DA: ${duellyScan.domainAuthority}\n`
+
+  const serviceNames: Record<string, string> = {
+    "pitch-design": "Website Design",
+    "pitch-seo": "Search Engine Optimization",
+    "pitch-chatbot": "AI Chatbot",
+  }
+
+  const tagList = tags.map((t: string) => serviceNames[t] || t).join(", ")
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `You are writing a professional audit report for a local business.
+
+Business data:
+${context}
+
+They have been tagged for these services: ${tagList}
+
+For each tagged service, write a 2-3 sentence explanation of WHY this business needs it, referencing their actual data and scores. Be specific and professional.
+
+Return ONLY a JSON array: [{"service": "Service Name", "pitch": "explanation..."}]
+No markdown, no backticks.` }] }],
+          generationConfig: { temperature: 0.5, maxOutputTokens: 800, thinkingConfig: { thinkingBudget: 0 } },
+        }),
+        signal: AbortSignal.timeout(15000),
+      }
+    )
+    if (!response.ok) return []
+    const data = await response.json()
+    const text = (data.candidates?.[0]?.content?.parts || []).filter((p: any) => p.text).map((p: any) => p.text).join("\n")
+    const match = text.match(/\[[\s\S]*\]/)
+    if (!match) return []
+    return JSON.parse(match[0])
+  } catch {
+    return []
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json()
@@ -71,9 +131,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Business data required" }, { status: 400 })
     }
 
-    // Generate AI recommendations
-    const recommendations = await generateRecommendations(data.business)
+    // Generate AI recommendations and service pitches in parallel
+    const [recommendations, servicePitches] = await Promise.all([
+      generateRecommendations(data.business),
+      generateServicePitches(data.business),
+    ])
     data.recommendations = recommendations
+    data.servicePitches = servicePitches
 
     const pdfStream = await ReactPDF.renderToStream(
       React.createElement(AuditReport, { data })
