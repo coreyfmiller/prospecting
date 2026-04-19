@@ -21,6 +21,9 @@ const styles = StyleSheet.create({
   recommendation: { fontSize: 10, color: "#0d9488", fontStyle: "italic", marginTop: 8, padding: 10, backgroundColor: "#f0fdfa", borderRadius: 4 },
   footer: { position: "absolute", bottom: 30, left: 40, right: 40, textAlign: "center", fontSize: 8, color: "#999999", borderTop: "1px solid #e5e5e5", paddingTop: 8 },
   badge: { fontSize: 9, padding: "3 8", borderRadius: 10, color: "#ffffff" },
+  recItem: { marginBottom: 10, padding: 10, backgroundColor: "#f8fafc", borderRadius: 4, borderLeft: "3px solid #0d9488" },
+  recTitle: { fontSize: 11, fontWeight: "bold", color: "#1a1a1a", marginBottom: 3 },
+  recDesc: { fontSize: 9, color: "#555555", lineHeight: 1.4 },
 })
 
 function getScoreColor(score: number) {
@@ -36,7 +39,7 @@ function getScoreBg(score: number) {
 }
 
 export function AuditReport({ data }: { data: any }) {
-  const { business, companyName, logoUrl } = data
+  const { business, companyName, logoUrl, recommendations } = data
   const analysis = business.analysis
   const gbpAudit = business.gbpAudit
   const duellyScan = business.duellyScan
@@ -237,6 +240,19 @@ export function AuditReport({ data }: { data: any }) {
                 ))}
               </View>
             )}
+          </View>
+        )}
+
+        {/* Recommended Next Steps */}
+        {recommendations && recommendations.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recommended Next Steps</Text>
+            {recommendations.map((rec: any, i: number) => (
+              <View key={i} style={styles.recItem}>
+                <Text style={styles.recTitle}>{i + 1}. {rec.title}</Text>
+                <Text style={styles.recDesc}>{rec.description}</Text>
+              </View>
+            ))}
           </View>
         )}
 
