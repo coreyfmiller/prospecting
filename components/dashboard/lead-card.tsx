@@ -677,13 +677,6 @@ export function LeadCard({ business, onProspectChange, onBlock }: LeadCardProps)
 
         <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {business.source === "both"
-                ? "Google + Perplexity"
-                : business.source === "google"
-                ? "Google Places"
-                : "Perplexity"}
-            </Badge>
             <button
               onClick={() => setShowNotes(!showNotes)}
               className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${
