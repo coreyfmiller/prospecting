@@ -23,8 +23,8 @@ import { addToBlocklist } from "@/lib/blocklist"
 
 function ScoreGauge({ value, label, sublabel }: { value: number; label: string; sublabel?: string }) {
   const clamped = Math.max(0, Math.min(100, value));
-  // MarketMojo palette: Vibrant Aqua (#00A6BF), Warning Amber (#F1C40F), Market Surge Red (#E05D5D)
-  const hex = clamped >= 60 ? "#00A6BF" : clamped >= 30 ? "#F1C40F" : "#E05D5D";
+  // MarketMojo palette: Success Green (#2ECC71), Deeper Amber (#E6A817), Market Surge Red (#E05D5D)
+  const hex = clamped >= 60 ? "#2ECC71" : clamped >= 30 ? "#E6A817" : "#E05D5D";
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (clamped / 100) * circumference;
