@@ -301,16 +301,16 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
         {/* Duelly Scan */}
         {canAnalyze && (
           <Button onClick={handleDuellyScan} disabled={scanningDuelly || duellyCooldown > 0} variant="outline" size="sm" className="w-full gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/30">
-            {scanningDuelly ? <><Loader2 className="w-4 h-4 animate-spin" /> Running Duelly scan...</> : duellyCooldown > 0 ? <>Cooldown {duellyCooldown}s</> : <><TrendingUp className="w-4 h-4" /> {duellyScan ? "Rescan with Duelly" : "Duelly Scan"}</>}
+            {scanningDuelly ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning site...</> : duellyCooldown > 0 ? <>Cooldown {duellyCooldown}s</> : <><TrendingUp className="w-4 h-4" /> {duellyScan ? "Rescan Site" : "SEO & AI Scan"}</>}
           </Button>
         )}
         {duellyError && <p className="text-xs text-destructive">{duellyError}</p>}
         {duellyScan && (
           <div className="space-y-2 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-            <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-indigo-500" /> Duelly Report</p>
+            <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-indigo-500" /> Site Report</p>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div><p className={`text-lg font-bold ${duellyScan.seoScore >= 60 ? "text-green-600" : duellyScan.seoScore >= 30 ? "text-amber-500" : "text-red-500"}`}>{duellyScan.seoScore}</p><p className="text-xs text-muted-foreground">SEO</p></div>
-              <div><p className={`text-lg font-bold ${duellyScan.geoScore >= 60 ? "text-green-600" : duellyScan.geoScore >= 30 ? "text-amber-500" : "text-red-500"}`}>{duellyScan.geoScore}</p><p className="text-xs text-muted-foreground">GEO</p></div>
+              <div><p className={`text-lg font-bold ${duellyScan.geoScore >= 60 ? "text-green-600" : duellyScan.geoScore >= 30 ? "text-amber-500" : "text-red-500"}`}>{duellyScan.geoScore}</p><p className="text-xs text-muted-foreground">AI Visibility (GEO)</p></div>
               <div><p className="text-lg font-bold text-foreground">{duellyScan.domainAuthority}</p><p className="text-xs text-muted-foreground">DA</p></div>
             </div>
             {duellyScan.criticalIssues?.length > 0 && <div className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Issues: </span>{duellyScan.criticalIssues.slice(0, 3).join(", ")}{duellyScan.criticalIssues.length > 3 && ` +${duellyScan.criticalIssues.length - 3} more`}</div>}
