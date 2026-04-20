@@ -26,5 +26,5 @@ inclusion: auto
 
 ## Score Gauge Colors
 - Score >= 60: Success Green (`#2ECC71`)
-- Score 30-59: Warning Amber (`#F1C40F`)
+- Score 30-59: Orange (`#F97316`)
 - Score < 30: Market Surge Red (`#E05D5D`)
