@@ -62,6 +62,7 @@ export default function Dashboard() {
   const [location, setLocation] = useState("")
   const [category, setCategory] = useState("")
   const [radius, setRadius] = useState("15")
+  const [unit, setUnit] = useState<"km" | "mi">("km")
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -142,7 +143,7 @@ export default function Dashboard() {
       const res = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ location: location.trim(), category, radius: parseInt(radius) }),
+        body: JSON.stringify({ location: location.trim(), category, radius: unit === "mi" ? Math.round(parseInt(radius) * 1.60934) : parseInt(radius) }),
       })
 
       if (!res.ok) {
@@ -270,10 +271,9 @@ export default function Dashboard() {
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="sm:w-64">
                   <Building2 className="w-4 h-4 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder="All categories" />
+                  <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
                   {CATEGORIES.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
@@ -283,14 +283,24 @@ export default function Dashboard() {
               </Select>
 
               <Select value={radius} onValueChange={setRadius}>
-                <SelectTrigger className="sm:w-32">
+                <SelectTrigger className="sm:w-28">
                   <SelectValue placeholder="Radius" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="10">10 km</SelectItem>
-                  <SelectItem value="15">15 km</SelectItem>
-                  <SelectItem value="25">25 km</SelectItem>
-                  <SelectItem value="50">50 km</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="15">15</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={unit} onValueChange={(v) => setUnit(v as "km" | "mi")}>
+                <SelectTrigger className="sm:w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="km">km</SelectItem>
+                  <SelectItem value="mi">mi</SelectItem>
                 </SelectContent>
               </Select>
 
