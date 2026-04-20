@@ -339,6 +339,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
               <ScoreGauge value={duellyScan.domainAuthority} label="DA" />
             </div>
             {duellyScan.criticalIssues?.length > 0 && <div className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Issues: </span>{duellyScan.criticalIssues.slice(0, 3).join(", ")}{duellyScan.criticalIssues.length > 3 && ` +${duellyScan.criticalIssues.length - 3} more`}</div>}
+            <p className="text-[10px] text-muted-foreground/50 text-right">Powered by Duelly.ai · Moz</p>
           </div>
         )}
 
