@@ -21,6 +21,31 @@ import {
 } from "@/lib/db"
 import { addToBlocklist } from "@/lib/blocklist"
 
+function ScoreGauge({ value, label, sublabel }: { value: number; label: string; sublabel?: string }) {
+  const clamped = Math.max(0, Math.min(100, value));
+  const color = clamped >= 60 ? "text-green-500" : clamped >= 30 ? "text-amber-500" : "text-red-500";
+  const strokeColor = clamped >= 60 ? "stroke-green-500" : clamped >= 30 ? "stroke-amber-500" : "stroke-red-500";
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (clamped / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative w-[68px] h-[68px]">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 68 68">
+          <circle cx="34" cy="34" r={radius} fill="none" strokeWidth="5" className="stroke-muted/30" />
+          <circle cx="34" cy="34" r={radius} fill="none" strokeWidth="5" strokeLinecap="round"
+            className={strokeColor} strokeDasharray={circumference} strokeDashoffset={offset}
+            style={{ transition: "stroke-dashoffset 0.6s ease" }} />
+        </svg>
+        <span className={`absolute inset-0 flex items-center justify-center text-base font-bold ${color}`}>{clamped}</span>
+      </div>
+      <p className="text-xs text-muted-foreground leading-tight text-center">{label}</p>
+      {sublabel && <p className="text-[10px] text-muted-foreground/70 leading-none -mt-0.5">{sublabel}</p>}
+    </div>
+  );
+}
+
 const presenceConfig: Record<string, { label: string; variant: "secondary" | "outline" | "destructive"; icon: any }> = {
   website: { label: "Has Website", variant: "secondary", icon: Globe },
   "facebook-only": { label: "Facebook Only", variant: "outline", icon: Facebook },
@@ -306,12 +331,12 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
         )}
         {duellyError && <p className="text-xs text-destructive">{duellyError}</p>}
         {duellyScan && (
-          <div className="space-y-2 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+          <div className="space-y-3 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
             <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-indigo-500" /> Site Report</p>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div><p className={`text-lg font-bold ${duellyScan.seoScore >= 60 ? "text-green-600" : duellyScan.seoScore >= 30 ? "text-amber-500" : "text-red-500"}`}>{duellyScan.seoScore}</p><p className="text-xs text-muted-foreground">SEO</p></div>
-              <div><p className={`text-lg font-bold ${duellyScan.geoScore >= 60 ? "text-green-600" : duellyScan.geoScore >= 30 ? "text-amber-500" : "text-red-500"}`}>{duellyScan.geoScore}</p><p className="text-xs text-muted-foreground">AI Visibility (GEO)</p></div>
-              <div><p className="text-lg font-bold text-foreground">{duellyScan.domainAuthority}</p><p className="text-xs text-muted-foreground">DA</p></div>
+            <div className="grid grid-cols-3 gap-2">
+              <ScoreGauge value={duellyScan.seoScore} label="SEO" />
+              <ScoreGauge value={duellyScan.geoScore} label="AI Visibility" sublabel="(GEO)" />
+              <ScoreGauge value={duellyScan.domainAuthority} label="DA" />
             </div>
             {duellyScan.criticalIssues?.length > 0 && <div className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Issues: </span>{duellyScan.criticalIssues.slice(0, 3).join(", ")}{duellyScan.criticalIssues.length > 3 && ` +${duellyScan.criticalIssues.length - 3} more`}</div>}
           </div>
