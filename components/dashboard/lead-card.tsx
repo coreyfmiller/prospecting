@@ -23,8 +23,8 @@ import { addToBlocklist } from "@/lib/blocklist"
 
 function ScoreGauge({ value, label, sublabel }: { value: number; label: string; sublabel?: string }) {
   const clamped = Math.max(0, Math.min(100, value));
-  const color = clamped >= 60 ? "text-green-500" : clamped >= 30 ? "text-amber-500" : "text-red-500";
-  const strokeColor = clamped >= 60 ? "stroke-green-500" : clamped >= 30 ? "stroke-amber-500" : "stroke-red-500";
+  // MarketMojo palette: Vibrant Aqua (#00A6BF), Warning Amber (#F1C40F), Market Surge Red (#E05D5D)
+  const hex = clamped >= 60 ? "#00A6BF" : clamped >= 30 ? "#F1C40F" : "#E05D5D";
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (clamped / 100) * circumference;
@@ -35,10 +35,10 @@ function ScoreGauge({ value, label, sublabel }: { value: number; label: string; 
         <svg className="w-full h-full -rotate-90" viewBox="0 0 68 68">
           <circle cx="34" cy="34" r={radius} fill="none" strokeWidth="5" className="stroke-muted/30" />
           <circle cx="34" cy="34" r={radius} fill="none" strokeWidth="5" strokeLinecap="round"
-            className={strokeColor} strokeDasharray={circumference} strokeDashoffset={offset}
+            stroke={hex} strokeDasharray={circumference} strokeDashoffset={offset}
             style={{ transition: "stroke-dashoffset 0.6s ease" }} />
         </svg>
-        <span className={`absolute inset-0 flex items-center justify-center text-base font-bold ${color}`}>{clamped}</span>
+        <span className="absolute inset-0 flex items-center justify-center text-base font-bold" style={{ color: hex }}>{clamped}</span>
       </div>
       <p className="text-xs text-muted-foreground leading-tight text-center">{label}</p>
       {sublabel && <p className="text-[10px] text-muted-foreground/70 leading-none -mt-0.5">{sublabel}</p>}
