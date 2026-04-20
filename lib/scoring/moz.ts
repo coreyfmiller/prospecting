@@ -21,21 +21,19 @@ export async function getMozMetrics(targetUrl: string): Promise<MozMetrics | nul
 
   const domain = extractDomain(targetUrl)
   try {
-    const res = await fetch("https://api.moz.com/jsonrpc", {
+    const res = await fetch("https://lsapi.seomoz.com/v2/url_metrics", {
       method: "POST",
-      headers: { "x-moz-token": MOZ_API_TOKEN, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: crypto.randomUUID(),
-        method: "data.site.metrics.fetch",
-        params: { data: { site_query: { query: domain, scope: "domain" } } },
-      }),
+      headers: {
+        "Authorization": `Basic ${MOZ_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ targets: [domain] }),
       signal: AbortSignal.timeout(20000),
     })
     if (!res.ok) return null
     const data = await res.json()
-    if (data.error) return null
-    const m = data.result?.site_metrics || {}
+    const m = data.results?.[0]
+    if (!m) return null
     return {
       domainAuthority: Math.round(m.domain_authority ?? 0),
       pageAuthority: Math.round(m.page_authority ?? 0),
