@@ -25,7 +25,6 @@ import {
   Trash2,
   ShieldCheck,
   ScanSearch,
-  Ban,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
 import { saveBusinesses as dbSaveBusinesses, ensureProject, getBusinesses, saveAudit as dbSaveAudit, getActiveProjectId } from "@/lib/db"
@@ -73,7 +72,6 @@ export default function Dashboard() {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [blockChains, setBlockChains] = useState(true)
   const [blockedCount, setBlockedCount] = useState(0)
-  const [hideDismissed, setHideDismissed] = useState(true)
   const [analyzingAll, setAnalyzingAll] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 })
 
@@ -219,20 +217,16 @@ export default function Dashboard() {
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (hideDismissed) {
-      getBusinesses().then((saved) => {
-        const keys = new Set(
-          saved.filter((b) => b.status === "dismissed").map((b) => (b.name + "|" + b.address).toLowerCase())
-        )
-        setDismissedKeys(keys)
-      })
-    } else {
-      setDismissedKeys(new Set())
-    }
-  }, [hideDismissed, dismissRefresh])
+    getBusinesses().then((saved) => {
+      const keys = new Set(
+        saved.filter((b) => b.status === "dismissed").map((b) => (b.name + "|" + b.address).toLowerCase())
+      )
+      setDismissedKeys(keys)
+    })
+  }, [dismissRefresh])
 
   const filtered = businesses.filter((b) => {
-    if (hideDismissed && dismissedKeys.has((b.name + "|" + b.address).toLowerCase())) return false
+    if (dismissedKeys.has((b.name + "|" + b.address).toLowerCase())) return false
     if (filter === "website") return b.webPresence === "website"
     if (filter === "facebook-only") return b.webPresence === "facebook-only" || b.webPresence === "social-only"
     if (filter === "no-presence") return b.webPresence === "none"
@@ -329,17 +323,6 @@ export default function Dashboard() {
               >
                 <ShieldCheck className="w-4 h-4" />
                 {blockChains ? "Hiding big chains" : "Showing all businesses"}
-              </button>
-              <button
-                onClick={() => setHideDismissed(!hideDismissed)}
-                className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border transition-colors ${
-                  hideDismissed
-                    ? "bg-primary/10 border-primary/30 text-primary"
-                    : "bg-muted/30 border-border text-muted-foreground"
-                }`}
-              >
-                <Ban className="w-4 h-4" />
-                {hideDismissed ? "Hiding dismissed" : "Showing dismissed"}
               </button>
             </div>
           </div>

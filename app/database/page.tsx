@@ -26,6 +26,7 @@ import {
   Loader2,
   Flame,
   Ban,
+  ShieldCheck,
 } from "lucide-react"
 import {
   getBusinesses,
@@ -34,8 +35,9 @@ import {
   exportToCSV,
   type DbBusiness,
 } from "@/lib/db"
+import { isBlocked, isBlockChainsEnabled, setBlockChainsEnabled } from "@/lib/blocklist"
 
-type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed" | "yellow-pages" | "prospects" | "priority" | "dismissed"
+type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed" | "yellow-pages" | "prospects" | "priority"
 
 export default function DatabasePage() {
   const [businesses, setBusinesses] = useState<DbBusiness[]>([])
@@ -47,6 +49,11 @@ export default function DatabasePage() {
   const [sortBy, setSortBy] = useState("name")
   const [analyzingAll, setAnalyzingAll] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 })
+  const [blockChains, setBlockChains] = useState(true)
+
+  useEffect(() => {
+    setBlockChains(isBlockChainsEnabled())
+  }, [])
 
   const handleAnalyzeAll = async () => {
     const toAnalyze = filtered.filter((b) => b.web_presence === "website" && b.website && !b.analysis)
@@ -100,6 +107,11 @@ export default function DatabasePage() {
 
   const filtered = useMemo(() => {
     let result = businesses.filter((b) => {
+      // Always hide dismissed
+      if (b.status === "dismissed") return false
+      // Optionally hide big chains
+      if (blockChains && isBlocked(b.name)) return false
+
       if (searchTerm) {
         const term = searchTerm.toLowerCase()
         const match =
@@ -118,7 +130,6 @@ export default function DatabasePage() {
       if (filter === "yellow-pages") return !!(b.analysis as any)?.isYellowPages
       if (filter === "prospects") return b.status === "prospect"
       if (filter === "priority") return b.status === "priority"
-      if (filter === "dismissed") return b.status === "dismissed"
       return true
     })
 
@@ -135,7 +146,7 @@ export default function DatabasePage() {
     })
 
     return result
-  }, [businesses, filter, searchTerm, categoryFilter, sortBy])
+  }, [businesses, filter, searchTerm, categoryFilter, sortBy, blockChains])
 
   const handleExport = () => {
     const csv = exportToCSV(filtered)
@@ -232,6 +243,15 @@ export default function DatabasePage() {
 
           {/* Filter Badges */}
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => { const v = !blockChains; setBlockChains(v); setBlockChainsEnabled(v) }}
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border transition-colors ${
+                blockChains ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted/30 border-border text-muted-foreground"
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              {blockChains ? "Hiding big chains" : "Showing all businesses"}
+            </button>
             <Badge
               variant={filter === "all" ? "default" : "outline"}
               className="cursor-pointer"
@@ -295,14 +315,6 @@ export default function DatabasePage() {
             >
               <Flame className="w-3 h-3" />
               Priority ({stats.priority})
-            </Badge>
-            <Badge
-              variant={filter === "dismissed" ? "destructive" : "outline"}
-              className="cursor-pointer gap-1"
-              onClick={() => setFilter("dismissed")}
-            >
-              <Ban className="w-3 h-3" />
-              Dismissed ({stats.dismissed})
             </Badge>
           </div>
 
