@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
+import { crawlPage } from "@/lib/scoring/crawler"
+import { gradeWebsite } from "@/lib/scoring/grader"
+import { getMozMetrics } from "@/lib/scoring/moz"
 
-export const maxDuration = 180
+export const maxDuration = 60
 
 export interface DuellyScanResult {
   url: string
@@ -31,38 +34,37 @@ export async function POST(req: NextRequest) {
     }
     lastScanTime.set(url, now)
 
-    const apiUrl = process.env.DUELLY_API_URL
-    const apiKey = process.env.DUELLY_API_KEY
-    if (!apiUrl || !apiKey) {
-      return NextResponse.json({ error: "Duelly API not configured" }, { status: 500 })
+    // Crawl and grade in parallel with Moz
+    const [crawlResult, mozResult] = await Promise.allSettled([
+      crawlPage(url),
+      getMozMetrics(url),
+    ])
+
+    if (crawlResult.status === "rejected") {
+      return NextResponse.json({ error: "Failed to crawl site" }, { status: 500 })
     }
 
-    const response = await fetch(`${apiUrl}/api/prospect-scan`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-      },
-      body: JSON.stringify({ url }),
-      signal: AbortSignal.timeout(180000),
-    })
+    const pageData = crawlResult.value
 
-    if (!response.ok) {
-      const err = await response.text().catch(() => "Unknown error")
-      console.error("Duelly scan error:", err)
-      return NextResponse.json(
-        { error: `Duelly scan failed (${response.status})` },
-        { status: response.status }
-      )
+    if (pageData.botProtected) {
+      return NextResponse.json({
+        error: "Bot protection detected — unable to scan this site",
+      }, { status: 422 })
     }
 
-    const data = await response.json()
-    return NextResponse.json(data)
+    const scores = gradeWebsite(pageData)
+    const moz = mozResult.status === "fulfilled" ? mozResult.value : null
+
+    return NextResponse.json({
+      url: pageData.url,
+      seoScore: scores.seoScore,
+      geoScore: scores.geoScore,
+      domainAuthority: moz?.domainAuthority ?? 0,
+      criticalIssues: scores.criticalIssues,
+      scannedAt: new Date().toISOString(),
+    } as DuellyScanResult)
   } catch (error: any) {
-    console.error("Duelly proxy error:", error)
-    if (error.name === "TimeoutError") {
-      return NextResponse.json({ error: "Scan timed out (3min)" }, { status: 504 })
-    }
-    return NextResponse.json({ error: "Duelly scan failed" }, { status: 500 })
+    console.error("Scan error:", error)
+    return NextResponse.json({ error: "Scan failed" }, { status: 500 })
   }
 }
