@@ -105,7 +105,7 @@ export async function crawlPage(url: string): Promise<CrawlResult> {
       semanticTags: { article, main, nav, aside, headers, h1Count, h2Count, h3Count },
       links: { internal: internalLinks, external: externalLinks, socialLinksCount },
       media: { totalImages, imagesWithAlt },
-      wordCount, hasViewport,
+      wordCount,
     },
     technical: { responseTimeMs, isHttps },
     platformDetection: { platform: platformDetection.platform, label: platformDetection.label, confidence: platformDetection.confidence },
@@ -132,7 +132,7 @@ function emptyResult(url: string, responseTimeMs: number): CrawlResult {
       semanticTags: { article: 0, main: 0, nav: 0, aside: 0, headers: 0, h1Count: 0, h2Count: 0, h3Count: 0 },
       links: { internal: 0, external: 0, socialLinksCount: 0 },
       media: { totalImages: 0, imagesWithAlt: 0 },
-      wordCount: 0, hasViewport: false,
+      wordCount: 0,
     },
     technical: { responseTimeMs, isHttps: false },
   };

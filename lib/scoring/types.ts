@@ -66,7 +66,6 @@ export interface CrawlResult {
     links: { internal: number; external: number; socialLinksCount: number };
     media: { totalImages: number; imagesWithAlt: number };
     wordCount: number;
-    hasViewport: boolean;
   };
   technical: { responseTimeMs: number; isHttps: boolean };
   platformDetection?: { platform: string; label: string; confidence: string };
