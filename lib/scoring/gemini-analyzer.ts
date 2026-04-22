@@ -156,33 +156,23 @@ ${context.platform ? `
     - Aim for at least 3 CRITICAL, at least 3 HIGH, and at least 3 MEDIUM priority recommendations. Don't force a priority level if it's not warranted, but try hard to find issues at each level.
   `;
 
-  // Run 2 parallel Gemini calls and average semanticFlags for scoring stability
-  // This is the standard gemini.ts behavior
-  const [result1, result2] = await Promise.all([
+  // Run 3 parallel Gemini calls and average semanticFlags for tighter score stability
+  const [result1, result2, result3] = await Promise.all([
+    model.generateContent(prompt),
     model.generateContent(prompt),
     model.generateContent(prompt),
   ]);
 
-  const responseText1 = result1.response.text();
-  const responseText2 = result2.response.text();
+  const texts = [result1, result2, result3].map(r => r.response.text());
+  const matches = texts.map(t => t.match(/\{[\s\S]*\}/));
 
-  const jsonMatch1 = responseText1.match(/\{[\s\S]*\}/);
-  const jsonMatch2 = responseText2.match(/\{[\s\S]*\}/);
-  if (!jsonMatch1) throw new Error('Could not parse AI response 1 as JSON');
-
-  const parsed1 = safeJsonParse(jsonMatch1[0]);
-
-  // If second call failed, just use first result
-  if (!jsonMatch2) {
-    console.warn('[Gemini] Second call failed to parse, using single result');
-    return parsed1;
+  // Need at least 1 successful parse
+  const parsed: any[] = [];
+  for (const m of matches) {
+    if (m) { try { parsed.push(safeJsonParse(m[0])); } catch {} }
   }
+  if (parsed.length === 0) throw new Error('All 3 Gemini calls failed to parse');
 
-  const parsed2 = safeJsonParse(jsonMatch2[0]);
-
-  // Average the semanticFlags severity scores for stability
-  const flags1 = parsed1.semanticFlags || {};
-  const flags2 = parsed2.semanticFlags || {};
   const flagKeys = [
     'topicMisalignment', 'keywordStuffing', 'poorReadability',
     'noDirectQnAMatching', 'lowEntityDensity', 'poorFormattingConciseness',
@@ -190,24 +180,26 @@ ${context.platform ? `
     'lackOfHardData', 'heavyFirstPersonUsage', 'unsubstantiatedClaims',
   ];
 
+  // Average all successful calls
   const averagedFlags: Record<string, number> = {};
   for (const key of flagKeys) {
-    const v1 = typeof flags1[key] === 'number' ? flags1[key] : (flags1[key] ? 100 : 0);
-    const v2 = typeof flags2[key] === 'number' ? flags2[key] : (flags2[key] ? 100 : 0);
-    averagedFlags[key] = Math.round((v1 + v2) / 2);
+    const values = parsed.map(p => {
+      const v = p.semanticFlags?.[key];
+      return typeof v === 'number' ? v : (v ? 100 : 0);
+    });
+    averagedFlags[key] = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
   }
 
-  // Average schemaQuality score too
-  const sq1 = parsed1.schemaQuality?.score || 0;
-  const sq2 = parsed2.schemaQuality?.score || 0;
+  // Average schemaQuality score
+  const sqValues = parsed.map(p => p.schemaQuality?.score || 0);
+  const avgSq = Math.round(sqValues.reduce((a, b) => a + b, 0) / sqValues.length);
 
-  // Use first result as base, override with averaged values
   const merged = {
-    ...parsed1,
+    ...parsed[0],
     semanticFlags: averagedFlags,
     schemaQuality: {
-      ...parsed1.schemaQuality,
-      score: Math.round((sq1 + sq2) / 2),
+      ...parsed[0].schemaQuality,
+      score: avgSq,
     },
   };
 
