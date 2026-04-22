@@ -17,7 +17,7 @@ import { getMozMetrics } from '@/lib/scoring/moz';
 
 export const maxDuration = 120;
 
-export interface MojoScanResult {
+export interface DuellyScanResult {
   url: string;
   seoScore: number;
   geoScore: number;
@@ -108,9 +108,9 @@ export async function POST(req: NextRequest) {
       domainAuthority: moz?.domainAuthority ?? 0,
       criticalIssues,
       scannedAt: new Date().toISOString(),
-    } as MojoScanResult);
+    } as DuellyScanResult);
   } catch (error: any) {
-    console.error('Mojo scan error:', error);
+    console.error('Scan error:', error);
     return NextResponse.json({ error: error.message || 'Scan failed' }, { status: 500 });
   }
 }

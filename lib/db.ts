@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/client"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import type { MojoScanResult } from "@/app/api/mojo-scan/route"
+import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
 import type { GBPAudit } from "@/app/api/gbp-audit/route"
 
 // --- Types ---
@@ -33,7 +33,7 @@ export interface DbBusiness {
   emails: string[]
   notes?: string
   analysis?: SiteAnalysis
-  mojo_scan?: MojoScanResult
+  duelly_scan?: DuellyScanResult
   gbp_audit?: GBPAudit
   rankings?: any[]
   saved_at: string
@@ -275,9 +275,9 @@ export async function saveAnalysis(businessId: string, analysis: SiteAnalysis): 
   await supabase.from("businesses").update({ analysis, updated_at: new Date().toISOString() }).eq("id", businessId)
 }
 
-export async function saveMojoScan(businessId: string, scan: MojoScanResult): Promise<void> {
+export async function saveDuellyScan(businessId: string, scan: DuellyScanResult): Promise<void> {
   const supabase = getSupabase()
-  await supabase.from("businesses").update({ mojo_scan: scan, updated_at: new Date().toISOString() }).eq("id", businessId)
+  await supabase.from("businesses").update({ duelly_scan: scan, updated_at: new Date().toISOString() }).eq("id", businessId)
 }
 
 export async function saveGBPAudit(businessId: string, audit: GBPAudit): Promise<void> {

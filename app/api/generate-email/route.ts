@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     const analysis = business.analysis
     const gbpAudit = business.gbpAudit
-    const mojoScan = business.mojoScan
+    const duellyScan = business.duellyScan
     const aiAssessment = analysis?.aiAssessment
 
     let context = `Business: ${business.name}\nAddress: ${business.address}\n`
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     if (!analysis?.isMobileFriendly) context += "Not mobile friendly.\n"
     if (aiAssessment) context += `Website health score: ${aiAssessment.score}/10\nIssues: ${aiAssessment.reasons?.join(", ")}\n`
     if (gbpAudit) context += `Google Business completeness: ${gbpAudit.completenessScore}/100\nGBP issues: ${gbpAudit.issues?.join(", ")}\n`
-    if (mojoScan) context += `SEO Score: ${mojoScan.seoScore}/100, GEO Score: ${mojoScan.geoScore}/100, Domain Authority: ${mojoScan.domainAuthority}\n`
+    if (duellyScan) context += `SEO Score: ${duellyScan.seoScore}/100, GEO Score: ${duellyScan.geoScore}/100, Domain Authority: ${duellyScan.domainAuthority}\n`
 
     const pitchPrompts: Record<string, string> = {
       design: "You're pitching web design/redesign services. Focus on their outdated or missing website and how a modern site would help them get more customers.",

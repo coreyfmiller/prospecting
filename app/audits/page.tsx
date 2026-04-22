@@ -52,7 +52,7 @@ export default function AuditsPage() {
             <div className="space-y-3">
               {audits.map((audit) => {
                 const withWebsite = audit.results.filter((r: any) => r.hasWebsite).length
-                const scanned = audit.results.filter((r: any) => r.mojoScan).length
+                const scanned = audit.results.filter((r: any) => r.duellyScan).length
                 return (
                   <Link key={audit.id} href={`/audits/${audit.id}`}>
                     <Card className="hover:border-primary/30 transition-colors cursor-pointer">

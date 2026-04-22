@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       const batch = validCrawls.slice(i, i + 3);
       const batchResults = await Promise.allSettled(
         batch.map(async (crawl) => {
-          // Individual Gemini call — same as main page mojo-scan
+          // Individual Gemini call — same as main page scan
           const [aiResult, mozResult] = await Promise.allSettled([
             analyzeWithGemini({
               title: crawl.data.title,
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
             getMozMetrics(crawl.url),
           ]);
 
-          // Inject AI results — same logic as mojo-scan route
+          // Inject AI results — same logic as scan route
           if (aiResult.status === 'fulfilled') {
             const ai = aiResult.value;
             crawl.data.semanticFlags = ai.semanticFlags;

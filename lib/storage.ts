@@ -1,6 +1,6 @@
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import type { MojoScanResult } from "@/app/api/mojo-scan/route"
+import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
 import type { GBPAudit } from "@/app/api/gbp-audit/route"
 
 // --- Types ---
@@ -33,7 +33,7 @@ export interface SavedBusiness extends Business {
   serviceTags?: string[]
   emails?: string[]
   rankings?: RankingEntry[]
-  mojoScan?: MojoScanResult
+  duellyScan?: DuellyScanResult
   gbpAudit?: GBPAudit
 }
 
@@ -58,7 +58,7 @@ export interface AuditResult {
   reviewCount?: number
   category?: string
   googleMapsUri?: string
-  mojoScan?: MojoScanResult
+  duellyScan?: DuellyScanResult
 }
 
 export interface Audit {
@@ -418,11 +418,11 @@ export function saveEmails(businessId: string, emails: string[]): void {
   }
 }
 
-export function saveMojoScan(businessId: string, scan: MojoScanResult): void {
+export function saveDuellyScan(businessId: string, scan: DuellyScanResult): void {
   const businesses = getSavedBusinesses()
   const idx = businesses.findIndex((b) => b.id === businessId)
   if (idx !== -1) {
-    businesses[idx].mojoScan = scan
+    businesses[idx].duellyScan = scan
     _saveBusinessList(businesses)
   }
 }
@@ -526,7 +526,7 @@ export function getAudit(auditId: string): Audit | null {
   return getAudits().find((a) => a.id === auditId) || null
 }
 
-export function updateAuditResult(auditId: string, businessId: string, mojoScan: MojoScanResult): void {
+export function updateAuditResult(auditId: string, businessId: string, duellyScan: DuellyScanResult): void {
   const pid = getActiveProjectId()
   if (!pid) return
   const audits = getAudits()
@@ -534,7 +534,7 @@ export function updateAuditResult(auditId: string, businessId: string, mojoScan:
   if (!audit) return
   const result = audit.results.find((r) => r.businessId === businessId)
   if (result) {
-    result.mojoScan = mojoScan
+    result.duellyScan = duellyScan
     localStorage.setItem(auditsKey(pid), JSON.stringify(audits))
   }
 }
@@ -582,3 +582,4 @@ export function exportToCSV(businesses: SavedBusiness[]): string {
 
   return [headers.join(","), ...rows.map((row) => row.map(escape).join(","))].join("\n")
 }
+
