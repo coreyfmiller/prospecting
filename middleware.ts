@@ -29,6 +29,13 @@ export async function middleware(request: NextRequest) {
 
   // If not logged in and not on login page or auth callback, redirect to login
   if (!user && !request.nextUrl.pathname.startsWith("/login") && !request.nextUrl.pathname.startsWith("/auth")) {
+    // Allow through if there's an auth code in the URL (Supabase OAuth redirect)
+    if (request.nextUrl.searchParams.has("code")) {
+      // Redirect to the auth callback to exchange the code
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/callback"
+      return NextResponse.redirect(url)
+    }
     const url = request.nextUrl.clone()
     url.pathname = "/login"
     return NextResponse.redirect(url)
