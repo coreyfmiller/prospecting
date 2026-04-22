@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, Loader2, ArrowLeft, Download } from "lucide-react"
 import { getAudit, getBusinesses, type DbAudit, type DbBusiness } from "@/lib/db"
-import type { MojoScanResult } from "@/@/app/api/mojo-scan/route
+import type { MojoScanResult } from "@/app/api/mojo-scan/route"
 import Link from "next/link"
 
 export default function AuditDetailPage() {

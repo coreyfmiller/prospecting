@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/client"
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import type { MojoScanResult } from "@/@/app/api/mojo-scan/route
+import type { MojoScanResult } from "@/app/api/mojo-scan/route"
 import type { GBPAudit } from "@/app/api/gbp-audit/route"
 
 // --- Types ---
