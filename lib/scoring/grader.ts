@@ -1,4 +1,4 @@
-// Simplified SEO/GEO grader based on Duelly's scoring logic
+// Simplified SEO/GEO grader based on the scoring logic
 import type { CrawlResult } from "./crawler"
 
 export interface ScoreResult {

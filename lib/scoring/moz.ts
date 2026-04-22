@@ -1,4 +1,4 @@
-/** Moz API — ported from Duelly (uses api.moz.com/jsonrpc) */
+/** Moz API — uses api.moz.com/jsonrpc */
 
 const MOZ_API_TOKEN = process.env.MOZ_API_TOKEN || '';
 

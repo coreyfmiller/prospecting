@@ -1,4 +1,4 @@
-/** Component-based SEO scoring — ported from Duelly's scoring-components.ts */
+/** Component-based SEO scoring */
 import type { ComponentResult } from './types';
 import { getPenaltyWeight } from './scoring-config-site-types';
 

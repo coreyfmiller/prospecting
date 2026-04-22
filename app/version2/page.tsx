@@ -197,9 +197,6 @@ export default function Version2Page() {
                                 {scan.criticalIssues.length > 3 && ` +${scan.criticalIssues.length - 3} more`}
                               </div>
                             )}
-                            <p className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground/50">
-                              Powered by <img src="/duelly.png" alt="Duelly" className="h-3 inline-block" />
-                            </p>
                           </div>
                         ) : scan?.error ? (
                           <p className="text-xs text-destructive">{scan.error}</p>

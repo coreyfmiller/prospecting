@@ -1,4 +1,4 @@
-/** Grader V2 — ported from Duelly. Identical scoring logic. */
+/** Grader V2 — component-based scoring. Identical scoring logic. */
 import { SEO_CATEGORIES } from './scoring-components';
 import type { CategoryScore, ComponentResult, GraderResult } from './types';
 

@@ -1,4 +1,4 @@
-/** Site-type penalty weights — ported from Duelly */
+/** Site-type penalty weights */
 import type { SiteType } from './types';
 
 export interface SiteTypePenaltyWeights {

@@ -52,7 +52,7 @@ export default function AuditsPage() {
             <div className="space-y-3">
               {audits.map((audit) => {
                 const withWebsite = audit.results.filter((r: any) => r.hasWebsite).length
-                const scanned = audit.results.filter((r: any) => r.duellyScan).length
+                const scanned = audit.results.filter((r: any) => r.mojoScan).length
                 return (
                   <Link key={audit.id} href={`/audits/${audit.id}`}>
                     <Card className="hover:border-primary/30 transition-colors cursor-pointer">
@@ -99,7 +99,7 @@ export default function AuditsPage() {
             <div className="bg-card border border-border rounded-lg p-6 max-w-sm mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-foreground mb-2">Delete this audit?</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                This will permanently delete this audit and all its Duelly scan results. This cannot be undone.
+                This will permanently delete this audit and all its scan results. This cannot be undone.
               </p>
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(null)}>Cancel</Button>

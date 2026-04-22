@@ -1,4 +1,4 @@
-/** Site type detector — ported from Duelly */
+/** Site type detector */
 import type { SiteType, SiteTypeResult, CrawlResult } from './types';
 
 export function detectSiteType(page: CrawlResult): SiteTypeResult {

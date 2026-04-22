@@ -18,8 +18,8 @@ MarketMojo.ai is a local business prospecting tool for web agencies and freelanc
 - pnpm package manager
 
 ## Key Architecture
-- `/app/api/duelly-scan/` — SEO & AI Visibility scan endpoint (full scoring pipeline)
-- `/lib/scoring/` — Duelly-ported scoring engine (crawler, grader-v2, Gemini analyzer, site-type detector, scoring components)
+- `/app/api/mojo-scan/` — SEO & AI Visibility scan endpoint (full scoring pipeline)
+- `/lib/scoring/` — Scoring engine (crawler, grader-v2, Gemini analyzer, site-type detector, scoring components)
 - `/crawl-worker/` — Standalone Playwright service deployed to Railway
 - `/lib/db.ts` — Supabase data layer (businesses, projects, audits)
 - `/lib/blocklist.ts` — Chain business filtering
@@ -34,10 +34,9 @@ MarketMojo.ai is a local business prospecting tool for web agencies and freelanc
 
 ## Branding Rules
 - Product name: **MarketMojo.ai**
-- Never reference "Duelly" in user-facing UI except "Powered by" attribution on scan results
 - GEO score is labeled **"AI Visibility (GEO)"** in the UI
-- Scan button says **"SEO & AI Scan"** not "Duelly Scan"
-- Report header says **"Site Report"** not "Duelly Report"
+- Scan button says **"SEO & AI Scan"**
+- Report header says **"Site Report"**
 
 ## Environment Variables (Vercel)
 - `GEMINI_API_KEY` — Google Generative AI

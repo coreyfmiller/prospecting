@@ -1,4 +1,4 @@
-/** Platform/CMS detector — ported from Duelly */
+/** Platform/CMS detector */
 
 export type Platform =
   | 'wordpress' | 'shopify' | 'wix' | 'squarespace' | 'webflow'

@@ -1,7 +1,7 @@
 /**
  * Crawler — calls the Playwright crawl worker to get JS-rendered page data.
  * Falls back to fetch+cheerio if the worker isn't configured.
- * This ensures identical page data to Duelly's pipeline.
+ * This ensures identical page data to the scoring pipeline.
  */
 import * as cheerio from 'cheerio';
 import { detectPlatform } from './platform-detector';
@@ -13,7 +13,7 @@ const CRAWL_WORKER_SECRET = process.env.CRAWL_WORKER_SECRET || '';
 export async function crawlPage(url: string): Promise<CrawlResult> {
   if (!url.startsWith('http')) url = `https://${url}`;
 
-  // Use Playwright crawl worker when configured (identical to Duelly)
+  // Use Playwright crawl worker when configured
   if (CRAWL_WORKER_URL && CRAWL_WORKER_SECRET) {
     return crawlViaWorker(url);
   }
@@ -23,7 +23,7 @@ export async function crawlPage(url: string): Promise<CrawlResult> {
 }
 
 /**
- * Crawl via the Playwright worker — identical page data to Duelly.
+ * Crawl via the Playwright worker — identical page data to the scoring pipeline.
  */
 async function crawlViaWorker(url: string): Promise<CrawlResult> {
   const start = Date.now();

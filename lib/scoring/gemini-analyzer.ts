@@ -1,5 +1,5 @@
 /**
- * Gemini AI analysis — ported from Duelly's gemini.ts EXACTLY.
+ * Gemini AI analysis — full semantic analysis.
  * Uses the FULL prompt (not skipRecommendations) because that's what prospect-scan uses.
  * 2-call averaged for score stability.
  */
@@ -55,7 +55,7 @@ export async function analyzeWithGemini(context: {
     generationConfig: { temperature: 0, topP: 0.1, responseMimeType: 'application/json' },
   });
 
-  // FULL prompt — identical to Duelly's gemini.ts (prospect-scan does NOT use skipRecommendations)
+  // FULL prompt — identical to the gemini.ts (prospect-scan does NOT use skipRecommendations)
   const contentToAnalyze = context.thinnedText;
 
   const prompt = `
@@ -157,7 +157,7 @@ ${context.platform ? `
   `;
 
   // Run 2 parallel Gemini calls and average semanticFlags for scoring stability
-  // This is IDENTICAL to Duelly's gemini.ts behavior
+  // This is the standard gemini.ts behavior
   const [result1, result2] = await Promise.all([
     model.generateContent(prompt),
     model.generateContent(prompt),

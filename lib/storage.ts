@@ -1,6 +1,6 @@
 import type { Business } from "@/app/api/search/route"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
+import type { MojoScanResult } from "@/@/app/api/mojo-scan/route
 import type { GBPAudit } from "@/app/api/gbp-audit/route"
 
 // --- Types ---
@@ -33,7 +33,7 @@ export interface SavedBusiness extends Business {
   serviceTags?: string[]
   emails?: string[]
   rankings?: RankingEntry[]
-  duellyScan?: DuellyScanResult
+  mojoScan?: MojoScanResult
   gbpAudit?: GBPAudit
 }
 
@@ -58,7 +58,7 @@ export interface AuditResult {
   reviewCount?: number
   category?: string
   googleMapsUri?: string
-  duellyScan?: DuellyScanResult
+  mojoScan?: MojoScanResult
 }
 
 export interface Audit {
@@ -418,11 +418,11 @@ export function saveEmails(businessId: string, emails: string[]): void {
   }
 }
 
-export function saveDuellyScan(businessId: string, scan: DuellyScanResult): void {
+export function saveMojoScan(businessId: string, scan: MojoScanResult): void {
   const businesses = getSavedBusinesses()
   const idx = businesses.findIndex((b) => b.id === businessId)
   if (idx !== -1) {
-    businesses[idx].duellyScan = scan
+    businesses[idx].mojoScan = scan
     _saveBusinessList(businesses)
   }
 }
@@ -526,7 +526,7 @@ export function getAudit(auditId: string): Audit | null {
   return getAudits().find((a) => a.id === auditId) || null
 }
 
-export function updateAuditResult(auditId: string, businessId: string, duellyScan: DuellyScanResult): void {
+export function updateAuditResult(auditId: string, businessId: string, mojoScan: MojoScanResult): void {
   const pid = getActiveProjectId()
   if (!pid) return
   const audits = getAudits()
@@ -534,7 +534,7 @@ export function updateAuditResult(auditId: string, businessId: string, duellySca
   if (!audit) return
   const result = audit.results.find((r) => r.businessId === businessId)
   if (result) {
-    result.duellyScan = duellyScan
+    result.mojoScan = mojoScan
     localStorage.setItem(auditsKey(pid), JSON.stringify(audits))
   }
 }

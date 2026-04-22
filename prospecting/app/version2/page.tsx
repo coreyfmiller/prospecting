@@ -81,9 +81,9 @@ export default function Version2Page() {
         <div className="max-w-7xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <TrendingUp className="w-6 h-6" style={{ color: "#00A6BF" }} /> Version 2 — Batch AI Scan Test
+              <TrendingUp className="w-6 h-6" style={{ color: "#00A6BF" }} /> Version 2 — Batch Scan Test
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Crawl all sites, send to Gemini in ONE batch prompt (x2 averaged). Compare quality vs individual scans.</p>
+            <p className="text-sm text-muted-foreground mt-1">Same individual Gemini calls per site, but crawled in parallel. Should produce identical scores to main page.</p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
@@ -110,15 +110,13 @@ export default function Version2Page() {
                 <Badge variant="outline" className="gap-1"><Globe className="w-3 h-3" /> {withSites.length} with websites</Badge>
                 <Badge variant="outline" className="gap-1"><XCircle className="w-3 h-3" /> {businesses.length - withSites.length} without</Badge>
                 <Button onClick={handleBatchScan} disabled={scanning || withSites.length === 0} className="gap-2 ml-auto" style={{ backgroundColor: "#00A6BF" }}>
-                  {scanning ? <><Loader2 className="w-4 h-4 animate-spin" /> Batch scanning {withSites.length} sites...</> : <><TrendingUp className="w-4 h-4" /> Batch AI Scan ({withSites.length} sites)</>}
+                  {scanning ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning {withSites.length} sites...</> : <><TrendingUp className="w-4 h-4" /> Batch Scan ({withSites.length} sites)</>}
                 </Button>
               </div>
 
               {scanTime !== null && (
                 <div className="flex gap-4 text-sm">
                   <span className="text-muted-foreground">Scanned {scanResults.size} sites in <span className="font-medium text-foreground">{scanTime}s</span></span>
-                  <span className="text-muted-foreground">Est. cost: <span className="font-medium text-foreground">${(withSites.length * 0.005).toFixed(3)}</span></span>
-                  <span className="text-muted-foreground">vs individual: ~{withSites.length * 20}s / ~${(withSites.length * 0.05).toFixed(2)}</span>
                 </div>
               )}
 
@@ -147,12 +145,11 @@ export default function Version2Page() {
                                 {scan.criticalIssues.slice(0, 3).join(", ")}{scan.criticalIssues.length > 3 && ` +${scan.criticalIssues.length - 3} more`}
                               </div>
                             )}
-                            <p className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground/50">Powered by <img src="/duelly.png" alt="Duelly" className="h-3 inline-block" /></p>
                           </div>
                         ) : scan?.error ? (
                           <p className="text-xs text-destructive">{scan.error}</p>
                         ) : scanning ? (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="w-3 h-3 animate-spin" /> Waiting for batch results...</div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="w-3 h-3 animate-spin" /> Scanning...</div>
                         ) : null}
                       </CardContent>
                     </Card>
@@ -166,7 +163,7 @@ export default function Version2Page() {
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <Search className="w-12 h-12 text-muted-foreground/40 mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-1">Search to test batch scanning</h3>
-              <p className="text-sm text-muted-foreground max-w-md">Search an area, then hit "Batch AI Scan" to crawl all sites and analyze them in a single Gemini call.</p>
+              <p className="text-sm text-muted-foreground max-w-md">Search an area, then hit Batch Scan. Uses the same individual Gemini calls as the main page but crawls in parallel.</p>
             </div>
           )}
         </div>

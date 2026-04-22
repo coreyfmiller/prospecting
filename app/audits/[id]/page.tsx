@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, Loader2, ArrowLeft, Download } from "lucide-react"
 import { getAudit, getBusinesses, type DbAudit, type DbBusiness } from "@/lib/db"
-import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
+import type { MojoScanResult } from "@/@/app/api/mojo-scan/route
 import Link from "next/link"
 
 export default function AuditDetailPage() {
@@ -57,7 +57,7 @@ export default function AuditDetailPage() {
   const handleBatchScan = async (count: number) => {
     if (!audit) return
     const toScan = businesses
-      .filter((b: any) => (b.has_website || b.hasWebsite) && b.website && !(b.duelly_scan || b.duellyScan))
+      .filter((b: any) => (b.has_website || b.hasWebsite) && b.website && !(b.mojo_scan || b.mojoScan))
       .slice(0, count)
     if (toScan.length === 0) return
     setBatchScanning(true)
@@ -65,14 +65,13 @@ export default function AuditDetailPage() {
 
     for (let i = 0; i < toScan.length; i++) {
       try {
-        const res = await fetch("/api/duelly-scan", {
+        const res = await fetch("/api/mojo-scan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: toScan[i].website }),
         })
         if (res.ok) {
-          const data: DuellyScanResult = await res.json()
-          // Duelly scan is saved via the LeadCard component
+          const data: MojoScanResult = await res.json()
         }
       } catch {}
       setBatchProgress({ done: i + 1, total: toScan.length })

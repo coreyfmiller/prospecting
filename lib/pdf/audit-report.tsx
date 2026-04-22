@@ -45,7 +45,7 @@ export function AuditReport({ data }: { data: any }) {
   const { business, companyName, logoUrl, recommendations, servicePitches } = data
   const analysis = business.analysis
   const gbpAudit = business.gbpAudit
-  const duellyScan = business.duellyScan
+  const mojoScan = business.mojoScan
   const aiAssessment = analysis?.aiAssessment
   const now = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
 
@@ -109,7 +109,7 @@ export function AuditReport({ data }: { data: any }) {
         </View>
 
         {/* Scores */}
-        {(aiAssessment || gbpAudit || duellyScan) && (
+        {(aiAssessment || gbpAudit || mojoScan) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Scores</Text>
             <View style={styles.scoreBox}>
@@ -129,17 +129,17 @@ export function AuditReport({ data }: { data: any }) {
                   <Text style={styles.scoreLabel}>Google Business</Text>
                 </View>
               )}
-              {duellyScan && (
+              {mojoScan && (
                 <>
-                  <View style={[styles.score, { backgroundColor: getScoreBg(duellyScan.seoScore) }]}>
-                    <Text style={[styles.scoreValue, { color: getScoreColor(duellyScan.seoScore) }]}>
-                      {duellyScan.seoScore}
+                  <View style={[styles.score, { backgroundColor: getScoreBg(mojoScan.seoScore) }]}>
+                    <Text style={[styles.scoreValue, { color: getScoreColor(mojoScan.seoScore) }]}>
+                      {mojoScan.seoScore}
                     </Text>
                     <Text style={styles.scoreLabel}>SEO Score</Text>
                   </View>
-                  <View style={[styles.score, { backgroundColor: getScoreBg(duellyScan.geoScore) }]}>
-                    <Text style={[styles.scoreValue, { color: getScoreColor(duellyScan.geoScore) }]}>
-                      {duellyScan.geoScore}
+                  <View style={[styles.score, { backgroundColor: getScoreBg(mojoScan.geoScore) }]}>
+                    <Text style={[styles.scoreValue, { color: getScoreColor(mojoScan.geoScore) }]}>
+                      {mojoScan.geoScore}
                     </Text>
                     <Text style={styles.scoreLabel}>GEO Score</Text>
                   </View>

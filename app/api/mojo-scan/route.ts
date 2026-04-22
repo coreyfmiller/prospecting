@@ -1,6 +1,6 @@
 /**
- * Duelly Scan — full scoring engine built into MarketMojo.
- * Same pipeline as Duelly's /api/prospect-scan:
+ * Mojo Scan — full scoring engine built into MarketMojo.
+ * Same pipeline as the /api/prospect-scan:
  *   1. Crawl page (fetch + cheerio)
  *   2. Detect site type
  *   3. Run Gemini AI (2 calls averaged) + Moz DA in parallel
@@ -17,7 +17,7 @@ import { getMozMetrics } from '@/lib/scoring/moz';
 
 export const maxDuration = 120;
 
-export interface DuellyScanResult {
+export interface MojoScanResult {
   url: string;
   seoScore: number;
   geoScore: number;
@@ -78,8 +78,8 @@ export async function POST(req: NextRequest) {
         pageData.siteType = ai.detectedSiteType;
       }
     } else {
-      console.error('[Duelly Scan] Gemini failed, using heuristic fallback:', aiResult.reason);
-      // Heuristic fallback — same as Duelly's scan-preparation.ts
+      console.error('[Mojo Scan] Gemini failed, using heuristic fallback:', aiResult.reason);
+      // Heuristic fallback — same as the scan-preparation.ts
       applyHeuristicFlags(pageData);
     }
 
@@ -108,16 +108,16 @@ export async function POST(req: NextRequest) {
       domainAuthority: moz?.domainAuthority ?? 0,
       criticalIssues,
       scannedAt: new Date().toISOString(),
-    } as DuellyScanResult);
+    } as MojoScanResult);
   } catch (error: any) {
-    console.error('Duelly scan error:', error);
+    console.error('Mojo scan error:', error);
     return NextResponse.json({ error: error.message || 'Scan failed' }, { status: 500 });
   }
 }
 
 /**
  * Heuristic fallback when Gemini is unavailable.
- * Same logic as Duelly's scan-preparation.ts — graduated 0-100 severities.
+ * Same logic as scan-preparation.ts — graduated 0-100 severities.
  */
 function applyHeuristicFlags(scan: any) {
   const sd = scan.structuralData || {};

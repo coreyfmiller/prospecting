@@ -11,7 +11,7 @@ async function generateRecommendations(business: any): Promise<string[]> {
 
   const analysis = business.analysis
   const gbpAudit = business.gbpAudit
-  const duellyScan = business.duellyScan
+  const mojoScan = business.mojoScan
   const aiAssessment = analysis?.aiAssessment
 
   let context = `Business: ${business.name}\nAddress: ${business.address}\n`
@@ -26,7 +26,7 @@ async function generateRecommendations(business: any): Promise<string[]> {
   if (analysis?.flags?.length) context += `Technical issues: ${analysis.flags.join(", ")}\n`
   if (aiAssessment) context += `Website health: ${aiAssessment.score}/10. Issues: ${aiAssessment.reasons?.join(", ")}\n`
   if (gbpAudit) context += `Google Business completeness: ${gbpAudit.completenessScore}/100. Issues: ${gbpAudit.issues?.join(", ")}\n`
-  if (duellyScan) context += `SEO: ${duellyScan.seoScore}/100, GEO: ${duellyScan.geoScore}/100, Domain Authority: ${duellyScan.domainAuthority}\n`
+  if (mojoScan) context += `SEO: ${mojoScan.seoScore}/100, GEO: ${mojoScan.geoScore}/100, Domain Authority: ${mojoScan.domainAuthority}\n`
 
   try {
     const response = await fetch(
@@ -71,7 +71,7 @@ async function generateServicePitches(business: any): Promise<{ service: string;
 
   const analysis = business.analysis
   const gbpAudit = business.gbpAudit
-  const duellyScan = business.duellyScan
+  const mojoScan = business.mojoScan
 
   let context = `Business: ${business.name}\n`
   if (business.webPresence === "none") context += "NO website.\n"
@@ -80,7 +80,7 @@ async function generateServicePitches(business: any): Promise<{ service: string;
   if (analysis?.estimatedAge) context += `Age: ${analysis.estimatedAge}\n`
   if (analysis?.aiAssessment) context += `Health: ${analysis.aiAssessment.score}/10\n`
   if (gbpAudit) context += `GBP: ${gbpAudit.completenessScore}/100\n`
-  if (duellyScan) context += `SEO: ${duellyScan.seoScore}, GEO: ${duellyScan.geoScore}, DA: ${duellyScan.domainAuthority}\n`
+  if (mojoScan) context += `SEO: ${mojoScan.seoScore}, GEO: ${mojoScan.geoScore}, DA: ${mojoScan.domainAuthority}\n`
 
   const serviceNames: Record<string, string> = {
     "pitch-design": "Website Design",

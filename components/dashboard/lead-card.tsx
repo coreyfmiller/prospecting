@@ -11,12 +11,12 @@ import {
   TrendingUp, MapPinned, FileText,
 } from "lucide-react"
 import type { SiteAnalysis } from "@/app/api/analyze/route"
-import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
+import type { MojoScanResult } from "@/@/app/api/mojo-scan/route
 import type { GBPAudit } from "@/app/api/gbp-audit/route"
 import {
   updateBusinessStatus, updatePipelineStage, toggleServiceTag as dbToggleServiceTag,
   saveNotes as dbSaveNotes, saveEmails as dbSaveEmails, saveAnalysis as dbSaveAnalysis,
-  saveDuellyScan as dbSaveDuellyScan, saveGBPAudit as dbSaveGBPAudit,
+  saveMojoScan as dbSaveMojoScan, saveGBPAudit as dbSaveGBPAudit,
   SERVICE_TAGS, type PipelineStage, type BusinessStatus,
 } from "@/lib/db"
 import { addToBlocklist } from "@/lib/blocklist"
@@ -71,7 +71,7 @@ export interface CardBusiness {
   source?: string
   status?: BusinessStatus
   analysis?: SiteAnalysis | null
-  duellyScan?: DuellyScanResult | null
+  mojoScan?: MojoScanResult | null
   gbpAudit?: GBPAudit | null
   notes?: string
   pipelineStage?: PipelineStage
@@ -106,10 +106,10 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
   const [emailNotFound, setEmailNotFound] = useState(false)
   const [manualEmail, setManualEmail] = useState("")
   const [editingEmail, setEditingEmail] = useState(false)
-  const [duellyScan, setDuellyScan] = useState<DuellyScanResult | null>(business.duellyScan || null)
-  const [scanningDuelly, setScanningDuelly] = useState(false)
-  const [duellyError, setDuellyError] = useState<string | null>(null)
-  const [duellyCooldown, setDuellyCooldown] = useState(0)
+  const [mojoScan, setMojoScan] = useState<MojoScanResult | null>(business.mojoScan || null)
+  const [scanningMojo, setScanningMojo] = useState(false)
+  const [mojoError, setMojoError] = useState<string | null>(null)
+  const [mojoCooldown, setMojoCooldown] = useState(0)
   const [gbpAudit, setGbpAudit] = useState<GBPAudit | null>(business.gbpAudit || null)
   const [scanningGBP, setScanningGBP] = useState(false)
   const [generatingReport, setGeneratingReport] = useState(false)
@@ -158,18 +158,18 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
     setFindingEmail(false)
   }
 
-  const handleDuellyScan = async () => {
-    if (!business.website || duellyCooldown > 0) return
-    setScanningDuelly(true); setDuellyError(null)
+  const handleMojoScan = async () => {
+    if (!business.website || mojoCooldown > 0) return
+    setScanningMojo(true); setMojoError(null)
     try {
-      const res = await fetch("/api/duelly-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: business.website }) })
+      const res = await fetch("/api/mojo-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: business.website }) })
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Scan failed") }
       const data = await res.json()
-      setDuellyScan(data); dbSaveDuellyScan(business.id, data)
-    } catch (err: any) { setDuellyError(err.message || "Duelly scan failed") }
-    setScanningDuelly(false)
-    setDuellyCooldown(30)
-    const interval = setInterval(() => { setDuellyCooldown((p) => { if (p <= 1) { clearInterval(interval); return 0 } return p - 1 }) }, 1000)
+      setMojoScan(data); dbSaveMojoScan(business.id, data)
+    } catch (err: any) { setMojoError(err.message || "Scan failed") }
+    setScanningMojo(false)
+    setMojoCooldown(30)
+    const interval = setInterval(() => { setMojoCooldown((p) => { if (p <= 1) { clearInterval(interval); return 0 } return p - 1 }) }, 1000)
   }
 
   const handleGBPAudit = async () => {
@@ -186,7 +186,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
     try {
       const logoUrl = typeof window !== "undefined" ? localStorage.getItem("marketmojo_user_logo") : null
       const companyName = typeof window !== "undefined" ? localStorage.getItem("marketmojo_company_name") : null
-      const res = await fetch("/api/generate-report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business: { ...business, analysis, duellyScan, gbpAudit, serviceTags }, companyName, logoUrl }) })
+      const res = await fetch("/api/generate-report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business: { ...business, analysis, mojoScan, gbpAudit, serviceTags }, companyName, logoUrl }) })
       if (res.ok) { const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `audit-${business.name.replace(/[^a-zA-Z0-9]/g, "-")}.pdf`; a.click(); URL.revokeObjectURL(url) }
     } catch {}
     setGeneratingReport(false)
@@ -196,7 +196,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
     setGeneratingEmail(true); setEmailPitchType(pitchType)
     try {
       const companyName = typeof window !== "undefined" ? localStorage.getItem("marketmojo_company_name") : null
-      const res = await fetch("/api/generate-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business: { ...business, analysis, duellyScan, gbpAudit }, pitchType, companyName }) })
+      const res = await fetch("/api/generate-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business: { ...business, analysis, mojoScan, gbpAudit }, pitchType, companyName }) })
       if (res.ok) { const data = await res.json(); setEmailDraft(data.email) }
     } catch {}
     setGeneratingEmail(false)
@@ -323,23 +323,22 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
           </div>
         )}
 
-        {/* Duelly Scan */}
+        {/* Mojo Scan */}
         {canAnalyze && (
-          <Button onClick={handleDuellyScan} disabled={scanningDuelly || duellyCooldown > 0} variant="outline" size="sm" className="w-full gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/30">
-            {scanningDuelly ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning site...</> : duellyCooldown > 0 ? <>Cooldown {duellyCooldown}s</> : <><TrendingUp className="w-4 h-4" /> {duellyScan ? "Rescan Site" : "SEO & AI Scan"}</>}
+          <Button onClick={handleMojoScan} disabled={scanningMojo || mojoCooldown > 0} variant="outline" size="sm" className="w-full gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/30">
+            {scanningMojo ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning site...</> : mojoCooldown > 0 ? <>Cooldown {mojoCooldown}s</> : <><TrendingUp className="w-4 h-4" /> {mojoScan ? "Rescan Site" : "SEO & AI Scan"}</>}
           </Button>
         )}
-        {duellyError && <p className="text-xs text-destructive">{duellyError}</p>}
-        {duellyScan && (
+        {mojoError && <p className="text-xs text-destructive">{mojoError}</p>}
+        {mojoScan && (
           <div className="space-y-3 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
             <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-indigo-500" /> Site Report</p>
             <div className="grid grid-cols-3 gap-2">
-              <ScoreGauge value={duellyScan.seoScore} label="SEO" />
-              <ScoreGauge value={duellyScan.geoScore} label="AI Visibility" sublabel="(GEO)" />
-              <ScoreGauge value={duellyScan.domainAuthority} label="DA" />
+              <ScoreGauge value={mojoScan.seoScore} label="SEO" />
+              <ScoreGauge value={mojoScan.geoScore} label="AI Visibility" sublabel="(GEO)" />
+              <ScoreGauge value={mojoScan.domainAuthority} label="DA" />
             </div>
-            {duellyScan.criticalIssues?.length > 0 && <div className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Issues: </span>{duellyScan.criticalIssues.slice(0, 3).join(", ")}{duellyScan.criticalIssues.length > 3 && ` +${duellyScan.criticalIssues.length - 3} more`}</div>}
-            <p className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground/50">Powered by <img src="/duelly.png" alt="Duelly" className="h-3 inline-block" /></p>
+            {mojoScan.criticalIssues?.length > 0 && <div className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Issues: </span>{mojoScan.criticalIssues.slice(0, 3).join(", ")}{mojoScan.criticalIssues.length > 3 && ` +${mojoScan.criticalIssues.length - 3} more`}</div>}
           </div>
         )}
 
@@ -366,7 +365,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
         )}
 
         {/* Report & Email */}
-        {(analysis || gbpAudit || duellyScan) && (
+        {(analysis || gbpAudit || mojoScan) && (
           <div className="grid grid-cols-2 gap-2">
             <Button onClick={handleGenerateReport} disabled={generatingReport} variant="outline" size="sm" className="gap-1.5">
               {generatingReport ? <Loader2 className="w-4 h-4 animate-spin" /> : <><FileText className="w-3.5 h-3.5" /> Report</>}
