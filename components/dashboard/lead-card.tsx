@@ -127,6 +127,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
   const [analysis, setAnalysis] = useState<SiteAnalysis | null>(business.analysis || null)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [showAnalysis, setShowAnalysis] = useState(false)
   const [notes, setNotes] = useState(business.notes || "")
   const [showNotes, setShowNotes] = useState(!!business.notes)
   const [stage, setStage] = useState<PipelineStage>(business.pipelineStage || "none")
@@ -331,27 +332,44 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
         {/* Analysis Results */}
         {analysis && (
           <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border/50">
-            <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><ScanSearch className="w-3.5 h-3.5 text-primary" /> Site Analysis</p>
-            <div className="flex flex-wrap gap-1.5">
-              {analysis.platform && <Badge variant="secondary" className="text-xs gap-1"><Wrench className="w-3 h-3" />{analysis.platform}</Badge>}
-              {(analysis as any).isYellowPages && <Badge variant="destructive" className="text-xs gap-1"><AlertTriangle className="w-3 h-3" />Yellow Pages Site</Badge>}
-              {analysis.estimatedAge && <Badge variant="outline" className="text-xs gap-1"><Clock className="w-3 h-3" />{analysis.estimatedAge}</Badge>}
-              {!analysis.hasSSL && <Badge variant="destructive" className="text-xs gap-1"><ShieldAlert className="w-3 h-3" />No SSL</Badge>}
-              {!analysis.isMobileFriendly && <Badge variant="destructive" className="text-xs gap-1"><Smartphone className="w-3 h-3" />Not Mobile Friendly</Badge>}
-              {analysis.flags?.filter((f) => !f.includes("mobile") && !f.includes("SSL") && !f.includes("reach")).map((flag) => <Badge key={flag} variant="outline" className="text-xs">{flag}</Badge>)}
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">{analysis.summary}</p>
-            {(analysis as any).aiAssessment && (
-              <div className="pt-2 border-t border-border/30 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">Refresh Score</span>
-                  <span className={`text-xs font-bold ${(analysis as any).aiAssessment.score <= 3 ? "text-red-500" : (analysis as any).aiAssessment.score <= 6 ? "text-amber-500" : "text-green-500"}`}>
-                    {(analysis as any).aiAssessment.score}/10{(analysis as any).aiAssessment.needsRefresh && " — Needs Refresh"}
-                  </span>
-                </div>
-                {(analysis as any).aiAssessment.reasons?.length > 0 && <ul className="text-xs text-muted-foreground space-y-0.5">{(analysis as any).aiAssessment.reasons.map((r: string, i: number) => <li key={i}>• {r}</li>)}</ul>}
-                {(analysis as any).aiAssessment.recommendation && <p className="text-xs text-primary font-medium italic">"{(analysis as any).aiAssessment.recommendation}"</p>}
+            <button onClick={() => setShowAnalysis(!showAnalysis)} className="w-full flex items-center justify-between">
+              <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><ScanSearch className="w-3.5 h-3.5 text-primary" /> Site Analysis</p>
+              <span className="text-xs text-muted-foreground">{showAnalysis ? "▲" : "▼"}</span>
+            </button>
+            {/* Collapsed: show key badges only */}
+            {!showAnalysis && (
+              <div className="flex flex-wrap gap-1.5">
+                {analysis.platform && <Badge variant="secondary" className="text-xs">{analysis.platform}</Badge>}
+                {!analysis.hasSSL && <Badge variant="destructive" className="text-xs">No SSL</Badge>}
+                {!analysis.isMobileFriendly && <Badge variant="destructive" className="text-xs">Not Mobile</Badge>}
+                {(analysis as any).aiAssessment && <Badge variant={((analysis as any).aiAssessment.score <= 3) ? "destructive" : "outline"} className="text-xs">{(analysis as any).aiAssessment.score}/10</Badge>}
               </div>
+            )}
+            {/* Expanded: full details */}
+            {showAnalysis && (
+              <>
+                <div className="flex flex-wrap gap-1.5">
+                  {analysis.platform && <Badge variant="secondary" className="text-xs gap-1"><Wrench className="w-3 h-3" />{analysis.platform}</Badge>}
+                  {(analysis as any).isYellowPages && <Badge variant="destructive" className="text-xs gap-1"><AlertTriangle className="w-3 h-3" />Yellow Pages Site</Badge>}
+                  {analysis.estimatedAge && <Badge variant="outline" className="text-xs gap-1"><Clock className="w-3 h-3" />{analysis.estimatedAge}</Badge>}
+                  {!analysis.hasSSL && <Badge variant="destructive" className="text-xs gap-1"><ShieldAlert className="w-3 h-3" />No SSL</Badge>}
+                  {!analysis.isMobileFriendly && <Badge variant="destructive" className="text-xs gap-1"><Smartphone className="w-3 h-3" />Not Mobile Friendly</Badge>}
+                  {analysis.flags?.filter((f) => !f.includes("mobile") && !f.includes("SSL") && !f.includes("reach")).map((flag) => <Badge key={flag} variant="outline" className="text-xs">{flag}</Badge>)}
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{analysis.summary}</p>
+                {(analysis as any).aiAssessment && (
+                  <div className="pt-2 border-t border-border/30 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">Refresh Score</span>
+                      <span className={`text-xs font-bold ${(analysis as any).aiAssessment.score <= 3 ? "text-red-500" : (analysis as any).aiAssessment.score <= 6 ? "text-amber-500" : "text-green-500"}`}>
+                        {(analysis as any).aiAssessment.score}/10{(analysis as any).aiAssessment.needsRefresh && " — Needs Refresh"}
+                      </span>
+                    </div>
+                    {(analysis as any).aiAssessment.reasons?.length > 0 && <ul className="text-xs text-muted-foreground space-y-0.5">{(analysis as any).aiAssessment.reasons.map((r: string, i: number) => <li key={i}>• {r}</li>)}</ul>}
+                    {(analysis as any).aiAssessment.recommendation && <p className="text-xs text-primary font-medium italic">"{(analysis as any).aiAssessment.recommendation}"</p>}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
