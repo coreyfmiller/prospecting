@@ -108,7 +108,12 @@ export async function POST(req: NextRequest) {
       domainAuthority: moz?.domainAuthority ?? 0,
       criticalIssues,
       scannedAt: new Date().toISOString(),
-    } as DuellyScanResult);
+      _debug: {
+        semanticFlags: pageData.semanticFlags,
+        schemaQuality: pageData.schemaQuality,
+        siteType: pageData.siteType,
+      },
+    });
   } catch (error: any) {
     console.error('Scan error:', error);
     return NextResponse.json({ error: error.message || 'Scan failed' }, { status: 500 });
