@@ -159,7 +159,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
   }
 
   const handleDuellyScan = async () => {
-    if (!business.website || duellyCooldown > 0) return
+    if (!business.website) return
     setScanningDuelly(true); setDuellyError(null)
     try {
       const res = await fetch("/api/duelly-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: business.website }) })
@@ -168,8 +168,6 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
       setDuellyScan(data); dbSaveDuellyScan(business.id, data)
     } catch (err: any) { setDuellyError(err.message || "Scan failed") }
     setScanningDuelly(false)
-    setDuellyCooldown(30)
-    const interval = setInterval(() => { setDuellyCooldown((p) => { if (p <= 1) { clearInterval(interval); return 0 } return p - 1 }) }, 1000)
   }
 
   const handleGBPAudit = async () => {
@@ -325,8 +323,8 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
 
         {/* Mojo Scan */}
         {canAnalyze && (
-          <Button onClick={handleDuellyScan} disabled={scanningDuelly || duellyCooldown > 0} variant="outline" size="sm" className="w-full gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/30">
-            {scanningDuelly ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning site...</> : duellyCooldown > 0 ? <>Cooldown {duellyCooldown}s</> : <><TrendingUp className="w-4 h-4" /> {duellyScan ? "Rescan Site" : "SEO & AI Scan"}</>}
+          <Button onClick={handleDuellyScan} disabled={scanningDuelly} variant="outline" size="sm" className="w-full gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/30">
+            {scanningDuelly ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning site...</> : <><TrendingUp className="w-4 h-4" /> {duellyScan ? "Rescan Site" : "SEO & AI Scan"}</>}
           </Button>
         )}
         {duellyError && <p className="text-xs text-destructive">{duellyError}</p>}

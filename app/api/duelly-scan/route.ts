@@ -26,22 +26,16 @@ export interface DuellyScanResult {
   scannedAt?: string;
 }
 
-// Simple in-memory rate limiter
-const lastScanTime = new Map<string, number>();
-const COOLDOWN_MS = 30000;
+// Rate limiter disabled for testing
+// const lastScanTime = new Map<string, number>();
+// const COOLDOWN_MS = 30000;
 
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json();
     if (!url) return NextResponse.json({ error: 'URL is required' }, { status: 400 });
 
-    // Rate limit
-    const now = Date.now();
-    const last = lastScanTime.get(url) || 0;
-    if (now - last < COOLDOWN_MS) {
-      return NextResponse.json({ error: `Please wait ${Math.ceil((COOLDOWN_MS - (now - last)) / 1000)}s before scanning again` }, { status: 429 });
-    }
-    lastScanTime.set(url, now);
+    // Rate limit disabled for testing
 
     // 1. Crawl
     const pageData = await crawlPage(url);
