@@ -53,31 +53,33 @@ export function computeDeterministicGeoFlags(text: string): {
   const lower = text.toLowerCase();
   const words = lower.split(/\s+/).filter(w => w.length > 0);
   const totalWords = words.length;
-  if (totalWords < 10) return { promotionalTone: 50, lackOfHardData: 80, heavyFirstPersonUsage: 20, unsubstantiatedClaims: 40 };
+  if (totalWords < 10) return { promotionalTone: 60, lackOfHardData: 85, heavyFirstPersonUsage: 25, unsubstantiatedClaims: 50 };
 
-  // Promotional tone: % of sales words
+  // Promotional tone: % of sales words + baseline penalty for short/thin content
   let salesCount = 0;
   for (const w of words) { if (SALES_WORDS.has(w)) salesCount++; }
-  // Also check 2-word phrases
   for (let i = 0; i < words.length - 1; i++) {
     const phrase = words[i] + ' ' + words[i + 1];
     if (SALES_WORDS.has(phrase)) salesCount++;
   }
   const salesRatio = salesCount / totalWords;
-  const promotionalTone = Math.min(100, Math.round(salesRatio * 1500)); // 6.7% sales words = 100
+  // Harsher: 5% sales words = 100, plus baseline of 15 for any commercial page
+  const promotionalTone = Math.min(100, 15 + Math.round(salesRatio * 1700));
 
   // Hard data: count numbers, percentages, dates, dollar amounts
   const dataPatterns = text.match(/\d+%|\$[\d,.]+|\d{4}|\d+\.\d+|\d{1,3}(,\d{3})+|\d+ (years?|months?|days?|hours?|percent|million|billion|thousand)/gi) || [];
-  const dataRatio = dataPatterns.length / Math.max(1, totalWords / 100); // per 100 words
-  const lackOfHardData = Math.max(0, Math.min(100, Math.round(100 - dataRatio * 25))); // 4+ data points per 100 words = 0
+  const dataRatio = dataPatterns.length / Math.max(1, totalWords / 100);
+  // Harsher: need 6+ data points per 100 words to score 0, baseline of 20
+  const lackOfHardData = Math.max(0, Math.min(100, 20 + Math.round(80 - dataRatio * 14)));
 
-  // First person usage
+  // First person usage — harsher multiplier
   let fpCount = 0;
   for (const w of words) { if (FIRST_PERSON.has(w)) fpCount++; }
   const fpRatio = fpCount / totalWords;
-  const heavyFirstPersonUsage = Math.min(100, Math.round(fpRatio * 1000)); // 10% first person = 100
+  // Harsher: 7% first person = 100, baseline of 10
+  const heavyFirstPersonUsage = Math.min(100, 10 + Math.round(fpRatio * 1300));
 
-  // Unsubstantiated claims: strong claims without nearby links or data
+  // Unsubstantiated claims — harsher baseline
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
   let claimCount = 0;
   let substantiatedCount = 0;
@@ -86,12 +88,12 @@ export function computeDeterministicGeoFlags(text: string): {
     const hasClaim = CLAIM_WORDS.some(c => sLower.includes(c));
     if (hasClaim) {
       claimCount++;
-      // Check if sentence has a number, link, or citation nearby
       const hasData = /\d/.test(sentence) || /https?:\/\//.test(sentence) || /according to|source|study|research|report/i.test(sentence);
       if (hasData) substantiatedCount++;
     }
   }
-  const unsubstantiatedClaims = claimCount === 0 ? 10 : Math.min(100, Math.round(((claimCount - substantiatedCount) / claimCount) * 100));
+  // Harsher: baseline of 20 even with no claims (most small business sites make implicit claims)
+  const unsubstantiatedClaims = claimCount === 0 ? 20 : Math.min(100, Math.round(((claimCount - substantiatedCount) / claimCount) * 100));
 
   return { promotionalTone, lackOfHardData, heavyFirstPersonUsage, unsubstantiatedClaims };
 }
