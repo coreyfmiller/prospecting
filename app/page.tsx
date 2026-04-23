@@ -32,6 +32,7 @@ import type { Business } from "@/app/api/search/route"
 import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
 import { saveBusinesses as dbSaveBusinesses, ensureProject, getBusinesses, saveAudit as dbSaveAudit, getActiveProjectId, saveDuellyScan as dbSaveDuellyScan } from "@/lib/db"
 import { isBlocked, isBlockChainsEnabled, setBlockChainsEnabled } from "@/lib/blocklist"
+import { useCustomTags } from "@/hooks/use-custom-tags"
 
 const CATEGORIES = [
   "Restaurants & Cafes",
@@ -84,6 +85,7 @@ export default function Dashboard() {
   const [scanAllCount, setScanAllCount] = useState(0)
   const [scanSummary, setScanSummary] = useState<{ total: number; lowSeo: number; lowGeo: number; avgSeo: number; avgGeo: number; failed?: number } | null>(null)
   const [sortBy, setSortBy] = useState<string>("default")
+  const { customServiceTags, customPipelineStages } = useCustomTags()
 
   useEffect(() => {
     ensureProject().catch(console.error)
@@ -628,7 +630,7 @@ export default function Dashboard() {
               {/* Results Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((business) => (
-                  <LeadCard key={business.id} business={business} onBlock={handleBlock} onProspectChange={() => setDismissRefresh((n) => n + 1)} scanningExternal={scanningIds.has(business.id)} />
+                  <LeadCard key={business.id} business={business} onBlock={handleBlock} onProspectChange={() => setDismissRefresh((n) => n + 1)} scanningExternal={scanningIds.has(business.id)} customServiceTags={customServiceTags} customPipelineStages={customPipelineStages} />
                 ))}
               </div>
 

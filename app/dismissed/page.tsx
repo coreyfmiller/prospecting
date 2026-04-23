@@ -27,6 +27,7 @@ import {
   exportToCSV,
   type DbBusiness,
 } from "@/lib/db"
+import { useCustomTags } from "@/hooks/use-custom-tags"
 
 type FilterType = "all" | "website" | "facebook-only" | "no-presence"
 
@@ -35,6 +36,7 @@ export default function DismissedPage() {
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
+  const { customServiceTags, customPipelineStages } = useCustomTags()
 
   const loadData = async () => {
     const data = (await getBusinesses()).filter((b) => b.status === "dismissed")
@@ -167,6 +169,8 @@ export default function DismissedPage() {
                 }}
                 onProspectChange={loadData}
                 showScanAll={false}
+                customServiceTags={customServiceTags}
+                customPipelineStages={customPipelineStages}
               />
               {filtered.length === 0 && allBusinesses.length > 0 && (
                 <p className="text-center text-muted-foreground py-8">

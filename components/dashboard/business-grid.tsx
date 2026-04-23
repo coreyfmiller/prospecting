@@ -13,9 +13,11 @@ interface BusinessGridProps {
   onProspectChange?: () => void
   onBlock?: (name: string) => void
   showScanAll?: boolean
+  customServiceTags?: { id: string; label: string; color: string }[]
+  customPipelineStages?: { id: string; label: string; color: string }[]
 }
 
-export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, onBlock, showScanAll = true }: BusinessGridProps) {
+export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, onBlock, showScanAll = true, customServiceTags, customPipelineStages }: BusinessGridProps) {
   const [scanningAll, setScanningAll] = useState(false)
   const [scanProgress, setScanProgress] = useState({ done: 0, total: 0 })
   const [scanningIds, setScanningIds] = useState<Set<string>>(new Set())
@@ -205,6 +207,8 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
             onProspectChange={onProspectChange}
             onBlock={onBlock}
             scanningExternal={scanningIds.has(business.id)}
+            customServiceTags={customServiceTags}
+            customPipelineStages={customPipelineStages}
           />
         ))}
       </div>

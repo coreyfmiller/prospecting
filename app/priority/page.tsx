@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select"
 import { Search, Globe, XCircle, Facebook, Download, Flame, ScanSearch } from "lucide-react"
 import { getBusinesses, exportToCSV, type DbBusiness } from "@/lib/db"
+import { useCustomTags } from "@/hooks/use-custom-tags"
 
 type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed"
 
@@ -21,6 +22,7 @@ export default function PriorityPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
+  const { customServiceTags, customPipelineStages } = useCustomTags()
 
   const loadData = async () => {
     setAllBusinesses((await getBusinesses()).filter((b) => b.status === "priority"))
@@ -143,6 +145,8 @@ export default function PriorityPage() {
                   setAllBusinesses((prev) => prev.map((b) => b.id === id ? { ...b, ...updates } as any : b))
                 }}
                 onProspectChange={loadData}
+                customServiceTags={customServiceTags}
+                customPipelineStages={customPipelineStages}
               />
               {filtered.length === 0 && allBusinesses.length > 0 && (
                 <p className="text-center text-muted-foreground py-8">No priority businesses match your filters</p>

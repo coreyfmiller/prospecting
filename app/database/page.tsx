@@ -37,6 +37,7 @@ import {
   type DbBusiness,
 } from "@/lib/db"
 import { isBlocked, isBlockChainsEnabled, setBlockChainsEnabled } from "@/lib/blocklist"
+import { useCustomTags } from "@/hooks/use-custom-tags"
 
 type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed" | "yellow-pages" | "prospects" | "priority"
 
@@ -49,6 +50,9 @@ export default function DatabasePage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [sortBy, setSortBy] = useState("name")
   const [blockChains, setBlockChains] = useState(true)
+  const [analyzingAll, setAnalyzingAll] = useState(false)
+  const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 })
+  const { customServiceTags, customPipelineStages } = useCustomTags()
 
   useEffect(() => {
     setBlockChains(isBlockChainsEnabled())
@@ -340,6 +344,8 @@ export default function DatabasePage() {
                   setBusinesses((prev) => prev.map((b) => b.id === id ? { ...b, ...updates } as any : b))
                 }}
                 onProspectChange={refreshData}
+                customServiceTags={customServiceTags}
+                customPipelineStages={customPipelineStages}
               />
             </>
           )}

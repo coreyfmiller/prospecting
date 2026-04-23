@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, Download } from "lucide-react"
 import { getAudit, getBusinesses, type DbAudit } from "@/lib/db"
 import Link from "next/link"
+import { useCustomTags } from "@/hooks/use-custom-tags"
 
 export default function AuditDetailPage() {
   const params = useParams()
   const [audit, setAudit] = useState<DbAudit | null>(null)
   const [businesses, setBusinesses] = useState<CardBusiness[]>([])
-
+  const { customServiceTags, customPipelineStages } = useCustomTags()
   const loadData = async () => {
     const a = await getAudit(params.id as string)
     setAudit(a)
@@ -99,6 +100,8 @@ export default function AuditDetailPage() {
             businesses={businesses}
             onBusinessUpdate={handleBusinessUpdate}
             onProspectChange={loadData}
+            customServiceTags={customServiceTags}
+            customPipelineStages={customPipelineStages}
           />
         </div>
       </main>

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select"
 import { Search, Globe, XCircle, Facebook, Download, SearchCheck, ScanSearch, Paintbrush, Bot } from "lucide-react"
 import { getBusinesses, exportToCSV, SERVICE_TAGS, type DbBusiness } from "@/lib/db"
+import { useCustomTags } from "@/hooks/use-custom-tags"
 
 type FilterType = "all" | "website" | "facebook-only" | "no-presence"
 
@@ -22,6 +23,7 @@ export default function ServicesPage() {
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
   const [serviceFilter, setServiceFilter] = useState("all")
+  const { customServiceTags, customPipelineStages } = useCustomTags()
 
   const loadData = async () => {
     const data = (await getBusinesses()).filter((b) =>
@@ -166,6 +168,8 @@ export default function ServicesPage() {
                   setAllBusinesses((prev) => prev.map((b) => b.id === id ? { ...b, ...updates } as any : b))
                 }}
                 onProspectChange={loadData}
+                customServiceTags={customServiceTags}
+                customPipelineStages={customPipelineStages}
               />
               {filtered.length === 0 && allBusinesses.length > 0 && (
                 <p className="text-center text-muted-foreground py-8">No businesses match your filters</p>
