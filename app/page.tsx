@@ -538,7 +538,7 @@ export default function Dashboard() {
                   {scanningAll ? (
                     <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Scanning {scanProgress.done}/{scanProgress.total}</>
                   ) : (
-                    <><TrendingUp className="w-3.5 h-3.5" /> Scan All</>
+                    <><TrendingUp className="w-3.5 h-3.5" /> SEO Audit All</>
                   )}
                 </Button>
 
