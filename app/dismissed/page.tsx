@@ -21,6 +21,7 @@ import {
   Facebook,
   Download,
   Ban,
+  ScanSearch,
 } from "lucide-react"
 import {
   getBusinesses,
@@ -29,13 +30,14 @@ import {
 } from "@/lib/db"
 import { useCustomTags } from "@/hooks/use-custom-tags"
 
-type FilterType = "all" | "website" | "facebook-only" | "no-presence"
+type FilterType = "all" | "website" | "facebook-only" | "no-presence" | "analyzed"
 
 export default function DismissedPage() {
   const [allBusinesses, setAllBusinesses] = useState<DbBusiness[]>([])
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
+  const [sortBy, setSortBy] = useState("name")
   const { customServiceTags, customPipelineStages } = useCustomTags()
 
   const loadData = async () => {
@@ -55,11 +57,12 @@ export default function DismissedPage() {
     withWebsite: allBusinesses.filter((b) => b.web_presence === "website").length,
     facebookOnly: allBusinesses.filter((b) => b.web_presence === "facebook-only" || b.web_presence === "social-only").length,
     noPresence: allBusinesses.filter((b) => b.web_presence === "none").length,
+    analyzed: allBusinesses.filter((b) => b.analysis).length,
   }), [allBusinesses])
 
 
   const filtered = useMemo(() => {
-    return allBusinesses.filter((b) => {
+    let result = allBusinesses.filter((b) => {
       if (searchTerm) {
         const term = searchTerm.toLowerCase()
         const match =
@@ -74,9 +77,17 @@ export default function DismissedPage() {
       if (filter === "website") return b.web_presence === "website"
       if (filter === "facebook-only") return b.web_presence === "facebook-only" || b.web_presence === "social-only"
       if (filter === "no-presence") return b.web_presence === "none"
+      if (filter === "analyzed") return !!b.analysis
       return true
     })
-  }, [allBusinesses, filter, searchTerm, categoryFilter])
+    result.sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name)
+      if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0)
+      if (sortBy === "date") return new Date(b.saved_at || 0).getTime() - new Date(a.saved_at || 0).getTime()
+      return 0
+    })
+    return result
+  }, [allBusinesses, filter, searchTerm, categoryFilter, sortBy])
 
   const handleExport = () => {
     const csv = exportToCSV(filtered)
@@ -132,6 +143,16 @@ export default function DismissedPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="sm:w-40">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name A-Z</SelectItem>
+                <SelectItem value="rating">Highest Rating</SelectItem>
+                <SelectItem value="date">Newest First</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -146,6 +167,9 @@ export default function DismissedPage() {
             </Badge>
             <Badge variant={filter === "no-presence" ? "destructive" : "outline"} className="cursor-pointer gap-1" onClick={() => setFilter("no-presence")}>
               <XCircle className="w-3 h-3" /> No Presence ({stats.noPresence})
+            </Badge>
+            <Badge variant={filter === "analyzed" ? "default" : "outline"} className="cursor-pointer gap-1" onClick={() => setFilter("analyzed")}>
+              <ScanSearch className="w-3 h-3" /> Analyzed ({stats.analyzed})
             </Badge>
           </div>
 
