@@ -133,6 +133,7 @@ export default function Dashboard() {
 
   const handleScanAllClick = () => {
     const withWebsites = businesses.filter((b) => b.webPresence === "website" && b.website)
+    const withoutWebsites = businesses.filter((b) => b.webPresence !== "website")
     // Check for cached results (within 30 days)
     const needsScan = withWebsites.filter((b) => {
       const scan = (b as any).duellyScan
@@ -548,6 +549,11 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground mb-1">
                       This will run a full SEO & AI Visibility scan on {scanAllCount} websites.
                     </p>
+                    {businesses.filter((b) => b.webPresence !== "website").length > 0 && (
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {businesses.filter((b) => b.webPresence !== "website").length} businesses don't have websites and can't be scanned.
+                      </p>
+                    )}
                     <p className="text-sm text-muted-foreground mb-4">
                       This will use <span className="font-medium text-foreground">{scanAllCount} credits</span>. Sites scanned in the last 30 days will be skipped.
                     </p>
