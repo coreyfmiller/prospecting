@@ -156,53 +156,11 @@ ${context.platform ? `
     - Aim for at least 3 CRITICAL, at least 3 HIGH, and at least 3 MEDIUM priority recommendations. Don't force a priority level if it's not warranted, but try hard to find issues at each level.
   `;
 
-  // Run 3 parallel Gemini calls and average semanticFlags for tighter score stability
-  const [result1, result2, result3] = await Promise.all([
-    model.generateContent(prompt),
-    model.generateContent(prompt),
-    model.generateContent(prompt),
-  ]);
-
-  const texts = [result1, result2, result3].map(r => r.response.text());
-  const matches = texts.map(t => t.match(/\{[\s\S]*\}/));
-
-  // Need at least 1 successful parse
-  const parsed: any[] = [];
-  for (const m of matches) {
-    if (m) { try { parsed.push(safeJsonParse(m[0])); } catch {} }
-  }
-  if (parsed.length === 0) throw new Error('All 3 Gemini calls failed to parse');
-
-  const flagKeys = [
-    'topicMisalignment', 'keywordStuffing', 'poorReadability',
-    'noDirectQnAMatching', 'lowEntityDensity', 'poorFormattingConciseness',
-    'lackOfDefinitionStatements', 'promotionalTone', 'lackOfExpertiseSignals',
-    'lackOfHardData', 'heavyFirstPersonUsage', 'unsubstantiatedClaims',
-  ];
-
-  // Average all successful calls
-  const averagedFlags: Record<string, number> = {};
-  for (const key of flagKeys) {
-    const values = parsed.map(p => {
-      const v = p.semanticFlags?.[key];
-      return typeof v === 'number' ? v : (v ? 100 : 0);
-    });
-    averagedFlags[key] = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
-  }
-
-  // Average schemaQuality score
-  const sqValues = parsed.map(p => p.schemaQuality?.score || 0);
-  const avgSq = Math.round(sqValues.reduce((a, b) => a + b, 0) / sqValues.length);
-
-  const merged = {
-    ...parsed[0],
-    semanticFlags: averagedFlags,
-    schemaQuality: {
-      ...parsed[0].schemaQuality,
-      score: avgSq,
+  // Single Gemini call — testing variance without averaging
+  const result = await model.generateContent(prompt);
+  const responseText = result.response.text();
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Could not parse AI response as JSON');
+  return safeJsonParse(jsonMatch[0]);
     },
-  };
-
-  console.log('[Gemini] Averaged semanticFlags from 2 calls:', JSON.stringify(averagedFlags));
-  return merged;
 }
