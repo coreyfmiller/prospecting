@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { DashboardHeader } from "@/components/dashboard/header"
-import { LeadCard } from "@/components/dashboard/lead-card"
+import { BusinessGrid } from "@/components/dashboard/business-grid"
+import type { CardBusiness } from "@/components/dashboard/lead-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -47,8 +48,6 @@ export default function DatabasePage() {
   const [stats, setStats] = useState<any>({})
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [sortBy, setSortBy] = useState("name")
-  const [analyzingAll, setAnalyzingAll] = useState(false)
-  const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 })
   const [blockChains, setBlockChains] = useState(true)
 
   useEffect(() => {
@@ -335,16 +334,13 @@ export default function DatabasePage() {
               <p className="text-sm text-muted-foreground">
                 Showing {filtered.length} of {businesses.length} businesses
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filtered.map((business) => (
-                  <LeadCard key={business.id} business={business} onProspectChange={refreshData} />
-                ))}
-              </div>
-              {filtered.length === 0 && businesses.length > 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  No businesses match your filters
-                </p>
-              )}
+              <BusinessGrid
+                businesses={filtered as any as CardBusiness[]}
+                onBusinessUpdate={(id, updates) => {
+                  setBusinesses((prev) => prev.map((b) => b.id === id ? { ...b, ...updates } as any : b))
+                }}
+                onProspectChange={refreshData}
+              />
             </>
           )}
         </div>

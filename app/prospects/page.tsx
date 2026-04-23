@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { DashboardHeader } from "@/components/dashboard/header"
-import { LeadCard } from "@/components/dashboard/lead-card"
+import { BusinessGrid } from "@/components/dashboard/business-grid"
+import type { CardBusiness } from "@/components/dashboard/lead-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -186,11 +187,13 @@ export default function ProspectsPage() {
               <p className="text-sm text-muted-foreground">
                 Showing {filtered.length} of {allBusinesses.length} prospects
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filtered.map((business) => (
-                  <LeadCard key={business.id} business={business} onProspectChange={loadData} />
-                ))}
-              </div>
+              <BusinessGrid
+                businesses={filtered as any as CardBusiness[]}
+                onBusinessUpdate={(id, updates) => {
+                  setAllBusinesses((prev) => prev.map((b) => b.id === id ? { ...b, ...updates } as any : b))
+                }}
+                onProspectChange={loadData}
+              />
               {filtered.length === 0 && allBusinesses.length > 0 && (
                 <p className="text-center text-muted-foreground py-8">
                   No prospects match your filters
