@@ -162,5 +162,4 @@ ${context.platform ? `
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Could not parse AI response as JSON');
   return safeJsonParse(jsonMatch[0]);
-    },
 }
