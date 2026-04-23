@@ -82,7 +82,7 @@ export default function Dashboard() {
   const [scanningIds, setScanningIds] = useState<Set<string>>(new Set())
   const [showScanConfirm, setShowScanConfirm] = useState(false)
   const [scanAllCount, setScanAllCount] = useState(0)
-  const [scanSummary, setScanSummary] = useState<{ total: number; lowSeo: number; lowGeo: number; avgSeo: number; avgGeo: number } | null>(null)
+  const [scanSummary, setScanSummary] = useState<{ total: number; lowSeo: number; lowGeo: number; avgSeo: number; avgGeo: number; failed?: number } | null>(null)
   const [sortBy, setSortBy] = useState<string>("default")
 
   useEffect(() => {
@@ -163,6 +163,7 @@ export default function Dashboard() {
 
     const BATCH_SIZE = 5
     let completed = 0
+    let failed = 0
     const results: { seoScore: number; geoScore: number }[] = []
 
     for (let i = 0; i < toScan.length; i += BATCH_SIZE) {
@@ -173,20 +174,44 @@ export default function Dashboard() {
       await Promise.allSettled(
         batch.map(async (b) => {
           try {
-            const res = await fetch("/api/duelly-scan", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ url: b.website }),
-            })
-            if (res.ok) {
-              const data = await res.json()
-              results.push({ seoScore: data.seoScore, geoScore: data.geoScore })
-              dbSaveDuellyScan(b.id, data)
-              setBusinesses((prev) =>
-                prev.map((biz) => biz.id === b.id ? { ...biz, duellyScan: data } : biz)
-              )
+            // Run SEO & AI scan + Website analysis + Email discovery in parallel
+            const [scanRes, analyzeRes] = await Promise.allSettled([
+              fetch("/api/duelly-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: b.website }) }),
+              fetch("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: b.website }) }),
+            ])
+
+            let scanOk = false
+
+            // Handle SEO & AI scan result
+            if (scanRes.status === "fulfilled" && scanRes.value.ok) {
+              const scanData = await scanRes.value.json()
+              results.push({ seoScore: scanData.seoScore, geoScore: scanData.geoScore })
+              dbSaveDuellyScan(b.id, scanData)
+              setBusinesses((prev) => prev.map((biz) => biz.id === b.id ? { ...biz, duellyScan: scanData } : biz))
+              scanOk = true
+            } else {
+              // Scan failed — show error on card
+              const errMsg = scanRes.status === "fulfilled" ? (await scanRes.value.json().catch(() => ({}))).error || "Scan failed" : "Network error"
+              setBusinesses((prev) => prev.map((biz) => biz.id === b.id ? { ...biz, scanError: errMsg } : biz))
+              failed++
             }
-          } catch {}
+
+            // Handle website analysis result
+            if (analyzeRes.status === "fulfilled" && analyzeRes.value.ok) {
+              const analyzeData = await analyzeRes.value.json()
+              const { saveAnalysis: dbSave, saveEmails: dbSaveEmails } = await import("@/lib/db")
+              dbSave(b.id, analyzeData)
+              setBusinesses((prev) => prev.map((biz) => biz.id === b.id ? { ...biz, analysis: analyzeData } : biz))
+              // Save emails found during analysis
+              if (analyzeData.emails?.length) {
+                const existingEmails = (b as any).emails || []
+                dbSaveEmails(b.id, analyzeData.emails, existingEmails)
+              }
+            }
+          } catch {
+            failed++
+            setBusinesses((prev) => prev.map((biz) => biz.id === b.id ? { ...biz, scanError: "Unexpected error" } : biz))
+          }
           completed++
           setScanProgress({ done: completed, total: toScan.length })
           setScanningIds((prev) => { const next = new Set(prev); next.delete(b.id); return next })
@@ -195,15 +220,16 @@ export default function Dashboard() {
     }
 
     // Generate summary
-    if (results.length > 0) {
-      const avgSeo = Math.round(results.reduce((a, r) => a + r.seoScore, 0) / results.length)
-      const avgGeo = Math.round(results.reduce((a, r) => a + r.geoScore, 0) / results.length)
+    if (results.length > 0 || failed > 0) {
+      const avgSeo = results.length > 0 ? Math.round(results.reduce((a, r) => a + r.seoScore, 0) / results.length) : 0
+      const avgGeo = results.length > 0 ? Math.round(results.reduce((a, r) => a + r.geoScore, 0) / results.length) : 0
       setScanSummary({
         total: results.length,
         lowSeo: results.filter((r) => r.seoScore < 50).length,
         lowGeo: results.filter((r) => r.geoScore < 50).length,
         avgSeo,
         avgGeo,
+        failed,
       })
     }
 
@@ -547,7 +573,7 @@ export default function Dashboard() {
                   <div className="bg-card border border-border rounded-lg p-6 max-w-sm mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
                     <h3 className="text-lg font-semibold text-foreground mb-2">Scan {scanAllCount} websites?</h3>
                     <p className="text-sm text-muted-foreground mb-1">
-                      This will run a full SEO & AI Visibility scan on {scanAllCount} websites.
+                      This will run SEO & AI scoring, website analysis, and email discovery on {scanAllCount} websites.
                     </p>
                     {businesses.filter((b) => b.webPresence !== "website").length > 0 && (
                       <p className="text-sm text-muted-foreground mb-1">
@@ -570,6 +596,7 @@ export default function Dashboard() {
                 <div className="p-4 rounded-lg border" style={{ backgroundColor: "rgba(0,166,191,0.05)", borderColor: "rgba(0,166,191,0.2)" }}>
                   <div className="flex flex-wrap gap-4 text-sm">
                     <span><span className="font-medium text-foreground">{scanSummary.total}</span> sites scanned</span>
+                    {scanSummary.failed ? <span><span className="font-medium" style={{ color: "#E05D5D" }}>{scanSummary.failed}</span> failed — credits refunded</span> : null}
                     <span><span className="font-medium" style={{ color: "#E05D5D" }}>{scanSummary.lowSeo}</span> below 50 SEO</span>
                     <span><span className="font-medium" style={{ color: "#E05D5D" }}>{scanSummary.lowGeo}</span> below 50 AI Visibility</span>
                     <span>Avg SEO: <span className="font-medium text-foreground">{scanSummary.avgSeo}</span></span>

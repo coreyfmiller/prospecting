@@ -104,6 +104,7 @@ export interface CardBusiness {
   pipelineStage?: PipelineStage
   serviceTags?: string[]
   emails?: string[]
+  scanError?: string
 }
 
 interface LeadCardProps {
@@ -362,6 +363,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
           </Button>
         )}
         {duellyError && <p className="text-xs text-destructive">{duellyError}</p>}
+        {business.scanError && !duellyScan && <p className="text-xs text-destructive p-2 bg-destructive/10 rounded">{business.scanError} — credit refunded</p>}
         {(scanningDuelly || scanningExternal) && !duellyScan && (
           <div className="space-y-3 p-3 rounded-lg border" style={{ backgroundColor: "rgba(0,166,191,0.05)", borderColor: "rgba(0,166,191,0.2)" }}>
             <div className="grid grid-cols-3 gap-2">
