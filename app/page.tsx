@@ -25,9 +25,12 @@ import {
   Trash2,
   ShieldCheck,
   ScanSearch,
+  TrendingUp,
+  ArrowUpDown,
 } from "lucide-react"
 import type { Business } from "@/app/api/search/route"
-import { saveBusinesses as dbSaveBusinesses, ensureProject, getBusinesses, saveAudit as dbSaveAudit, getActiveProjectId } from "@/lib/db"
+import type { DuellyScanResult } from "@/app/api/duelly-scan/route"
+import { saveBusinesses as dbSaveBusinesses, ensureProject, getBusinesses, saveAudit as dbSaveAudit, getActiveProjectId, saveDuellyScan as dbSaveDuellyScan } from "@/lib/db"
 import { isBlocked, isBlockChainsEnabled, setBlockChainsEnabled } from "@/lib/blocklist"
 
 const CATEGORIES = [
@@ -74,6 +77,13 @@ export default function Dashboard() {
   const [blockedCount, setBlockedCount] = useState(0)
   const [analyzingAll, setAnalyzingAll] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 })
+  const [scanningAll, setScanningAll] = useState(false)
+  const [scanProgress, setScanProgress] = useState({ done: 0, total: 0 })
+  const [scanningIds, setScanningIds] = useState<Set<string>>(new Set())
+  const [showScanConfirm, setShowScanConfirm] = useState(false)
+  const [scanAllCount, setScanAllCount] = useState(0)
+  const [scanSummary, setScanSummary] = useState<{ total: number; lowSeo: number; lowGeo: number; avgSeo: number; avgGeo: number } | null>(null)
+  const [sortBy, setSortBy] = useState<string>("default")
 
   useEffect(() => {
     ensureProject().catch(console.error)
@@ -108,7 +118,6 @@ export default function Dashboard() {
           const data = await res.json()
           const { saveAnalysis: dbSave } = await import("@/lib/db")
           dbSave(toAnalyze[i].id, data)
-          // Update the card in real time
           setBusinesses((prev) =>
             prev.map((b) =>
               b.id === toAnalyze[i].id ? { ...b, analysis: data } : b
@@ -122,6 +131,87 @@ export default function Dashboard() {
     setAnalyzingAll(false)
   }
 
+  const handleScanAllClick = () => {
+    const withWebsites = businesses.filter((b) => b.webPresence === "website" && b.website)
+    // Check for cached results (within 30 days)
+    const needsScan = withWebsites.filter((b) => {
+      const scan = (b as any).duellyScan
+      if (!scan?.scannedAt) return true
+      const age = Date.now() - new Date(scan.scannedAt).getTime()
+      return age > 30 * 24 * 60 * 60 * 1000 // 30 days
+    })
+    setScanAllCount(needsScan.length)
+    if (needsScan.length === 0) return
+    setShowScanConfirm(true)
+  }
+
+  const handleScanAllConfirm = async () => {
+    setShowScanConfirm(false)
+    const withWebsites = businesses.filter((b) => b.webPresence === "website" && b.website)
+    const toScan = withWebsites.filter((b) => {
+      const scan = (b as any).duellyScan
+      if (!scan?.scannedAt) return true
+      const age = Date.now() - new Date(scan.scannedAt).getTime()
+      return age > 30 * 24 * 60 * 60 * 1000
+    })
+    if (toScan.length === 0) return
+
+    setScanningAll(true)
+    setScanProgress({ done: 0, total: toScan.length })
+    setScanSummary(null)
+
+    const BATCH_SIZE = 5
+    let completed = 0
+    const results: { seoScore: number; geoScore: number }[] = []
+
+    for (let i = 0; i < toScan.length; i += BATCH_SIZE) {
+      const batch = toScan.slice(i, i + BATCH_SIZE)
+      const ids = new Set(batch.map((b) => b.id))
+      setScanningIds((prev) => new Set([...prev, ...ids]))
+
+      await Promise.allSettled(
+        batch.map(async (b) => {
+          try {
+            const res = await fetch("/api/duelly-scan", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url: b.website }),
+            })
+            if (res.ok) {
+              const data = await res.json()
+              results.push({ seoScore: data.seoScore, geoScore: data.geoScore })
+              dbSaveDuellyScan(b.id, data)
+              setBusinesses((prev) =>
+                prev.map((biz) => biz.id === b.id ? { ...biz, duellyScan: data } : biz)
+              )
+            }
+          } catch {}
+          completed++
+          setScanProgress({ done: completed, total: toScan.length })
+          setScanningIds((prev) => { const next = new Set(prev); next.delete(b.id); return next })
+        })
+      )
+    }
+
+    // Generate summary
+    if (results.length > 0) {
+      const avgSeo = Math.round(results.reduce((a, r) => a + r.seoScore, 0) / results.length)
+      const avgGeo = Math.round(results.reduce((a, r) => a + r.geoScore, 0) / results.length)
+      setScanSummary({
+        total: results.length,
+        lowSeo: results.filter((r) => r.seoScore < 50).length,
+        lowGeo: results.filter((r) => r.geoScore < 50).length,
+        avgSeo,
+        avgGeo,
+      })
+    }
+
+    // Auto-sort by worst SEO
+    setSortBy("seo-worst")
+    setScanningAll(false)
+    setScanningIds(new Set())
+  }
+
   const handleClearResults = () => {
     setBusinesses([])
     setHasSearched(false)
@@ -129,6 +219,8 @@ export default function Dashboard() {
     setStats({ total: 0, withWebsite: 0, facebookOnly: 0, noPresence: 0 })
     setSaveInfo(null)
     setShowClearConfirm(false)
+    setScanSummary(null)
+    setSortBy("default")
   }
 
   const handleSearch = async () => {
@@ -231,6 +323,14 @@ export default function Dashboard() {
     if (filter === "facebook-only") return b.webPresence === "facebook-only" || b.webPresence === "social-only"
     if (filter === "no-presence") return b.webPresence === "none"
     return true
+  }).sort((a, b) => {
+    const scanA = (a as any).duellyScan
+    const scanB = (b as any).duellyScan
+    if (sortBy === "seo-worst") return (scanA?.seoScore ?? 999) - (scanB?.seoScore ?? 999)
+    if (sortBy === "seo-best") return (scanB?.seoScore ?? -1) - (scanA?.seoScore ?? -1)
+    if (sortBy === "geo-worst") return (scanA?.geoScore ?? 999) - (scanB?.geoScore ?? 999)
+    if (sortBy === "geo-best") return (scanB?.geoScore ?? -1) - (scanA?.geoScore ?? -1)
+    return 0
   })
 
   return (
@@ -404,15 +504,30 @@ export default function Dashboard() {
                   variant="outline"
                   size="sm"
                   className="gap-1.5"
-                  onClick={handleAnalyzeAll}
-                  disabled={analyzingAll || businesses.filter((b) => b.webPresence === "website").length === 0}
+                  onClick={handleScanAllClick}
+                  disabled={scanningAll || businesses.filter((b) => b.webPresence === "website").length === 0}
+                  style={!scanningAll ? { borderColor: "#00A6BF", color: "#00A6BF" } : {}}
                 >
-                  {analyzingAll ? (
-                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing {analyzeProgress.done}/{analyzeProgress.total}</>
+                  {scanningAll ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Scanning {scanProgress.done}/{scanProgress.total}</>
                   ) : (
-                    <><ScanSearch className="w-3.5 h-3.5" /> Analyze All</>
+                    <><TrendingUp className="w-3.5 h-3.5" /> Scan All</>
                   )}
                 </Button>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[160px] h-8 text-xs">
+                    <ArrowUpDown className="w-3 h-3 mr-1" />
+                    <SelectValue placeholder="Sort results" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default Order</SelectItem>
+                    <SelectItem value="seo-worst">SEO: Worst First</SelectItem>
+                    <SelectItem value="seo-best">SEO: Best First</SelectItem>
+                    <SelectItem value="geo-worst">AI Visibility: Worst First</SelectItem>
+                    <SelectItem value="geo-best">AI Visibility: Best First</SelectItem>
+                  </SelectContent>
+                </Select>
 
                 <Button
                   variant="outline"
@@ -424,6 +539,38 @@ export default function Dashboard() {
                   Clear Results
                 </Button>
               </div>
+
+              {/* Scan Confirmation */}
+              {showScanConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowScanConfirm(false)}>
+                  <div className="bg-card border border-border rounded-lg p-6 max-w-sm mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Scan {scanAllCount} websites?</h3>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      This will run a full SEO & AI Visibility scan on {scanAllCount} websites.
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      This will use <span className="font-medium text-foreground">{scanAllCount} credits</span>. Sites scanned in the last 30 days will be skipped.
+                    </p>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" size="sm" onClick={() => setShowScanConfirm(false)}>Cancel</Button>
+                      <Button size="sm" onClick={handleScanAllConfirm} style={{ backgroundColor: "#00A6BF" }}>Scan {scanAllCount} Sites</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Scan Summary */}
+              {scanSummary && (
+                <div className="p-4 rounded-lg border" style={{ backgroundColor: "rgba(0,166,191,0.05)", borderColor: "rgba(0,166,191,0.2)" }}>
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <span><span className="font-medium text-foreground">{scanSummary.total}</span> sites scanned</span>
+                    <span><span className="font-medium" style={{ color: "#E05D5D" }}>{scanSummary.lowSeo}</span> below 50 SEO</span>
+                    <span><span className="font-medium" style={{ color: "#E05D5D" }}>{scanSummary.lowGeo}</span> below 50 AI Visibility</span>
+                    <span>Avg SEO: <span className="font-medium text-foreground">{scanSummary.avgSeo}</span></span>
+                    <span>Avg AI Visibility: <span className="font-medium text-foreground">{scanSummary.avgGeo}</span></span>
+                  </div>
+                </div>
+              )}
 
               {/* Clear Confirmation Dialog */}
               {showClearConfirm && (
@@ -448,7 +595,7 @@ export default function Dashboard() {
               {/* Results Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((business) => (
-                  <LeadCard key={business.id} business={business} onBlock={handleBlock} onProspectChange={() => setDismissRefresh((n) => n + 1)} />
+                  <LeadCard key={business.id} business={business} onBlock={handleBlock} onProspectChange={() => setDismissRefresh((n) => n + 1)} scanningExternal={scanningIds.has(business.id)} />
                 ))}
               </div>
 

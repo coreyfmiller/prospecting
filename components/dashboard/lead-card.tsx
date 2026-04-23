@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -46,6 +46,33 @@ function ScoreGauge({ value, label, sublabel }: { value: number; label: string; 
   );
 }
 
+function ScanSpinner() {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative w-[68px] h-[68px]">
+        <svg className="w-full h-full animate-spin" style={{ animationDuration: "1.5s" }} viewBox="0 0 68 68">
+          <circle cx="34" cy="34" r={28} fill="none" strokeWidth="5" className="stroke-muted/20" />
+          <circle cx="34" cy="34" r={28} fill="none" strokeWidth="5" strokeLinecap="round"
+            stroke="#00A6BF" strokeDasharray={`${2 * Math.PI * 28 * 0.3} ${2 * Math.PI * 28 * 0.7}`} />
+        </svg>
+      </div>
+      <p className="text-xs text-muted-foreground leading-tight text-center">Scanning...</p>
+    </div>
+  );
+}
+
+function getCacheAge(scannedAt?: string): string | null {
+  if (!scannedAt) return null;
+  const diff = Date.now() - new Date(scannedAt).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Scanned just now";
+  if (mins < 60) return `Scanned ${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `Scanned ${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `Scanned ${days}d ago`;
+}
+
 const presenceConfig: Record<string, { label: string; variant: "secondary" | "outline" | "destructive"; icon: any }> = {
   website: { label: "Has Website", variant: "secondary", icon: Globe },
   "facebook-only": { label: "Facebook Only", variant: "outline", icon: Facebook },
@@ -85,9 +112,11 @@ interface LeadCardProps {
   onBlock?: (name: string) => void
   customServiceTags?: { id: string; label: string; color: string }[]
   customPipelineStages?: { id: string; label: string; color: string }[]
+  scanningExternal?: boolean
+  onScanComplete?: (id: string, result: DuellyScanResult) => void
 }
 
-export function LeadCard({ business, onProspectChange, onBlock, customServiceTags, customPipelineStages }: LeadCardProps) {
+export function LeadCard({ business, onProspectChange, onBlock, customServiceTags, customPipelineStages, scanningExternal, onScanComplete }: LeadCardProps) {
   const wp = business.webPresence || "none"
   const presence = presenceConfig[wp] || presenceConfig.none
   const PresenceIcon = presence.icon
@@ -109,6 +138,11 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
   const [duellyScan, setDuellyScan] = useState<DuellyScanResult | null>(business.duellyScan || null)
   const [scanningDuelly, setScanningDuelly] = useState(false)
   const [duellyError, setDuellyError] = useState<string | null>(null)
+
+  // Sync scan data from parent (for batch scanning)
+  useEffect(() => {
+    if (business.duellyScan && !duellyScan) setDuellyScan(business.duellyScan)
+  }, [business.duellyScan])
   const [duellyCooldown, setDuellyCooldown] = useState(0)
   const [gbpAudit, setGbpAudit] = useState<GBPAudit | null>(business.gbpAudit || null)
   const [scanningGBP, setScanningGBP] = useState(false)
@@ -321,22 +355,35 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
           </div>
         )}
 
-        {/* Mojo Scan */}
-        {canAnalyze && (
+        {/* Site Scan */}
+        {canAnalyze && !scanningExternal && (
           <Button onClick={handleDuellyScan} disabled={scanningDuelly} variant="outline" size="sm" className="w-full gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/30">
             {scanningDuelly ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning site...</> : <><TrendingUp className="w-4 h-4" /> {duellyScan ? "Rescan Site" : "SEO & AI Scan"}</>}
           </Button>
         )}
         {duellyError && <p className="text-xs text-destructive">{duellyError}</p>}
+        {(scanningDuelly || scanningExternal) && !duellyScan && (
+          <div className="space-y-3 p-3 rounded-lg border" style={{ backgroundColor: "rgba(0,166,191,0.05)", borderColor: "rgba(0,166,191,0.2)" }}>
+            <div className="grid grid-cols-3 gap-2">
+              <ScanSpinner />
+              <ScanSpinner />
+              <ScanSpinner />
+            </div>
+          </div>
+        )}
         {duellyScan && (
           <div className="space-y-3 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-            <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-indigo-500" /> Site Report</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-indigo-500" /> Site Report</p>
+              {duellyScan.scannedAt && <p className="text-[10px] text-muted-foreground/60">{getCacheAge(duellyScan.scannedAt)}</p>}
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <ScoreGauge value={duellyScan.seoScore} label="SEO" />
               <ScoreGauge value={duellyScan.geoScore} label="AI Visibility" sublabel="(GEO)" />
               <ScoreGauge value={duellyScan.domainAuthority} label="DA" />
             </div>
             {duellyScan.criticalIssues?.length > 0 && <div className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Issues: </span>{duellyScan.criticalIssues.slice(0, 3).join(", ")}{duellyScan.criticalIssues.length > 3 && ` +${duellyScan.criticalIssues.length - 3} more`}</div>}
+            <p className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground/50">Powered by <img src="/duelly.png" alt="Duelly" className="h-3 inline-block" /></p>
           </div>
         )}
 
