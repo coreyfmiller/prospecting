@@ -370,19 +370,33 @@ export async function clearProjectData(projectId?: string): Promise<void> {
 export function exportToCSV(businesses: DbBusiness[]): string {
   const headers = [
     "Name", "Category", "Address", "Phone", "Website", "Facebook",
-    "Web Presence", "Rating", "Reviews", "Source", "Platform",
-    "Estimated Age", "Mobile Friendly", "Has SSL", "Yellow Pages Site",
+    "Web Presence", "Rating", "Reviews", "Source",
+    "SEO Score", "GEO Score", "Domain Authority", "Critical Issues",
+    "GBP Score", "GBP Has Hours", "GBP Has Phone", "GBP Has Website", "GBP Has Description", "GBP Photos", "GBP Reviews",
+    "Platform", "Estimated Age", "Mobile Friendly", "Has SSL", "Yellow Pages Site",
     "Analysis Summary", "Search Query", "Notes", "Status", "Pipeline Stage",
     "Service Tags", "Emails", "Saved At",
   ]
 
   const rows = businesses.map((b) => {
     const a = b.analysis as any
+    const d = b.duelly_scan as any
+    const g = b.gbp_audit as any
     return [
       b.name, b.category || "", b.address, b.phone || "",
       b.website || "", b.facebook || "", b.web_presence,
       b.rating?.toString() || "", b.review_count?.toString() || "",
-      b.source, a?.platform || "", a?.estimatedAge || "",
+      b.source,
+      d?.seoScore?.toString() || "", d?.geoScore?.toString() || "", d?.domainAuthority?.toString() || "",
+      (d?.criticalIssues || []).join("; "),
+      g?.completenessScore?.toString() || "",
+      g ? (g.hasHours ? "Yes" : "No") : "",
+      g ? (g.hasPhone ? "Yes" : "No") : "",
+      g ? (g.hasWebsite ? "Yes" : "No") : "",
+      g ? (g.hasDescription ? "Yes" : "No") : "",
+      g?.photoCount?.toString() || "",
+      g?.reviewCount?.toString() || "",
+      a?.platform || "", a?.estimatedAge || "",
       a ? (a.isMobileFriendly ? "Yes" : "No") : "",
       a ? (a.hasSSL ? "Yes" : "No") : "",
       a ? (a.isYellowPages ? "Yes" : "No") : "",

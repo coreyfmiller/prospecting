@@ -7,9 +7,13 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  Globe, XCircle, Facebook, Phone, ExternalLink, Star, MapPin, Mail,
-  TrendingUp, MapPinned,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Globe, XCircle, Facebook, Phone, ExternalLink, Star, Mail,
+  ChevronDown,
 } from "lucide-react"
+import { updateBusinessStatus, type BusinessStatus } from "@/lib/db"
 
 const presenceConfig: Record<string, { label: string; variant: "secondary" | "outline" | "destructive"; icon: any }> = {
   website: { label: "Website", variant: "secondary", icon: Globe },
@@ -20,21 +24,34 @@ const presenceConfig: Record<string, { label: string; variant: "secondary" | "ou
 
 function ScoreBadge({ value, label }: { value: number; label: string }) {
   const color = value >= 60 ? "text-green-600" : value >= 30 ? "text-amber-500" : "text-red-500"
-  return (
-    <span className={`text-xs font-bold ${color}`} title={label}>{value}</span>
-  )
+  return <span className={`text-xs font-bold ${color}`} title={label}>{value}</span>
 }
+
+const statusOptions: { value: BusinessStatus; label: string; color: string }[] = [
+  { value: "neutral", label: "None", color: "" },
+  { value: "prospect", label: "Prospect", color: "bg-primary text-primary-foreground" },
+  { value: "priority", label: "Priority", color: "bg-amber-500 text-white" },
+  { value: "dismissed", label: "Dismissed", color: "bg-destructive text-destructive-foreground" },
+]
 
 interface BusinessTableProps {
   businesses: CardBusiness[]
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
   onToggleAll: () => void
+  onBusinessUpdate?: (id: string, updates: Partial<CardBusiness>) => void
+  onProspectChange?: () => void
   scanningIds?: Set<string>
 }
 
-export function BusinessTable({ businesses, selectedIds, onToggleSelect, onToggleAll, scanningIds }: BusinessTableProps) {
+export function BusinessTable({ businesses, selectedIds, onToggleSelect, onToggleAll, onBusinessUpdate, onProspectChange, scanningIds }: BusinessTableProps) {
   const allSelected = businesses.length > 0 && selectedIds.size === businesses.length
+
+  const handleStatusChange = async (id: string, newStatus: BusinessStatus) => {
+    await updateBusinessStatus(id, newStatus)
+    onBusinessUpdate?.(id, { status: newStatus })
+    onProspectChange?.()
+  }
 
   return (
     <div className="border border-border/60 rounded-lg overflow-hidden bg-card">
@@ -51,6 +68,7 @@ export function BusinessTable({ businesses, selectedIds, onToggleSelect, onToggl
               <TableHead className="text-center">SEO</TableHead>
               <TableHead className="text-center">GEO</TableHead>
               <TableHead className="text-center">DA</TableHead>
+              <TableHead className="text-center">GBP</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Issues</TableHead>
             </TableRow>
@@ -61,14 +79,12 @@ export function BusinessTable({ businesses, selectedIds, onToggleSelect, onToggl
               const presence = presenceConfig[wp] || presenceConfig.none
               const PresenceIcon = presence.icon
               const isScanning = scanningIds?.has(b.id)
+              const currentStatus = statusOptions.find((s) => s.value === (b.status || "neutral")) || statusOptions[0]
 
               return (
                 <TableRow key={b.id} className={`group ${selectedIds.has(b.id) ? "bg-primary/5" : ""} ${isScanning ? "animate-pulse" : ""}`}>
                   <TableCell>
-                    <Checkbox
-                      checked={selectedIds.has(b.id)}
-                      onCheckedChange={() => onToggleSelect(b.id)}
-                    />
+                    <Checkbox checked={selectedIds.has(b.id)} onCheckedChange={() => onToggleSelect(b.id)} />
                   </TableCell>
                   <TableCell>
                     <div className="min-w-[160px]">
@@ -117,11 +133,31 @@ export function BusinessTable({ businesses, selectedIds, onToggleSelect, onToggl
                   <TableCell className="text-center">
                     {b.duellyScan ? <ScoreBadge value={b.duellyScan.domainAuthority} label="DA" /> : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
+                  <TableCell className="text-center">
+                    {b.gbpAudit ? <ScoreBadge value={b.gbpAudit.completenessScore} label="GBP" /> : <span className="text-xs text-muted-foreground">—</span>}
+                  </TableCell>
                   <TableCell>
-                    {b.status === "priority" && <Badge className="bg-amber-500 text-white text-xs">Priority</Badge>}
-                    {b.status === "prospect" && <Badge className="bg-primary text-primary-foreground text-xs">Prospect</Badge>}
-                    {b.status === "dismissed" && <Badge variant="destructive" className="text-xs">Dismissed</Badge>}
-                    {(!b.status || b.status === "neutral") && <span className="text-xs text-muted-foreground">—</span>}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="flex items-center gap-1 outline-none">
+                        {currentStatus.color ? (
+                          <Badge className={`${currentStatus.color} text-xs cursor-pointer gap-1`}>
+                            {currentStatus.label} <ChevronDown className="w-3 h-3" />
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1 cursor-pointer hover:text-foreground">
+                            Set status <ChevronDown className="w-3 h-3" />
+                          </span>
+                        )}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {statusOptions.map((opt) => (
+                          <DropdownMenuItem key={opt.value} onClick={() => handleStatusChange(b.id, opt.value)}
+                            className={opt.value === (b.status || "neutral") ? "font-medium" : ""}>
+                            {opt.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                   <TableCell>
                     <div className="max-w-[200px]">

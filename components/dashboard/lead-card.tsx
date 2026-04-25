@@ -17,6 +17,7 @@ import {
   updateBusinessStatus, updatePipelineStage, toggleServiceTag as dbToggleServiceTag,
   saveNotes as dbSaveNotes, saveEmails as dbSaveEmails, saveAnalysis as dbSaveAnalysis,
   saveDuellyScan as dbSaveDuellyScan, saveGBPAudit as dbSaveGBPAudit,
+  deductCredits, refundCredits,
   SERVICE_TAGS, type PipelineStage, type BusinessStatus,
 } from "@/lib/db"
 import { addToBlocklist } from "@/lib/blocklist"
@@ -182,6 +183,8 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
   const handleAnalyze = async () => {
     if (!business.website) return
     setAnalyzing(true); setAnalyzeError(null)
+    const { success } = await deductCredits(1, "analyze", business.id, business.name)
+    if (!success) { setAnalyzeError("Insufficient credits"); setAnalyzing(false); return }
     try {
       const res = await fetch("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: business.website }) })
       if (!res.ok) throw new Error("Analysis failed")
@@ -192,7 +195,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
         const merged = await dbSaveEmails(business.id, data.emails, emails)
         setEmails(merged)
       }
-    } catch { setAnalyzeError("Could not analyze this site") }
+    } catch { setAnalyzeError("Could not analyze this site"); await refundCredits(1, "refund", business.id, business.name) }
     setAnalyzing(false)
   }
 
@@ -214,21 +217,26 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
   const handleDuellyScan = async () => {
     if (!business.website) return
     setScanningDuelly(true); setDuellyError(null)
+    const { success } = await deductCredits(1, "scan", business.id, business.name)
+    if (!success) { setDuellyError("Insufficient credits"); setScanningDuelly(false); return }
     try {
       const res = await fetch("/api/duelly-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: business.website }) })
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Scan failed") }
       const data = await res.json()
       setDuellyScan(data); dbSaveDuellyScan(business.id, data)
-    } catch (err: any) { setDuellyError(err.message || "Scan failed") }
+    } catch (err: any) { setDuellyError(err.message || "Scan failed"); await refundCredits(1, "refund", business.id, business.name) }
     setScanningDuelly(false)
   }
 
   const handleGBPAudit = async () => {
     setScanningGBP(true)
+    const { success } = await deductCredits(1, "gbp-audit", business.id, business.name)
+    if (!success) { setScanningGBP(false); return }
     try {
       const res = await fetch("/api/gbp-audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessName: business.name, address: business.address }) })
       if (res.ok) { const data = await res.json(); setGbpAudit(data); dbSaveGBPAudit(business.id, data) }
-    } catch {}
+      else { await refundCredits(1, "refund", business.id, business.name) }
+    } catch { await refundCredits(1, "refund", business.id, business.name) }
     setScanningGBP(false)
   }
 

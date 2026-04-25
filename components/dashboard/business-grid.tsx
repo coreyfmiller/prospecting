@@ -442,6 +442,8 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onToggleAll={toggleAll}
+          onBusinessUpdate={onBusinessUpdate}
+          onProspectChange={onProspectChange}
           scanningIds={scanningIds}
         />
       )}
