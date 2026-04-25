@@ -268,9 +268,9 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
 
   if (hidden) return null
 
-  const cardBg = isPriority ? "bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-400 dark:ring-amber-700"
-    : isProspect ? "bg-green-50 dark:bg-green-950/30 ring-1 ring-green-300 dark:ring-green-800"
-    : isDismissed ? "bg-red-50 dark:bg-red-950/30 ring-1 ring-red-300 dark:ring-red-800 opacity-75"
+  const cardBg = isPriority ? "bg-amber-50 dark:bg-amber-900/40 ring-1 ring-amber-400 dark:ring-amber-500"
+    : isProspect ? "bg-green-50 dark:bg-green-900/40 ring-1 ring-green-300 dark:ring-green-500"
+    : isDismissed ? "bg-red-50 dark:bg-red-900/30 ring-1 ring-red-300 dark:ring-red-500 opacity-75"
     : "bg-card"
 
   return (
