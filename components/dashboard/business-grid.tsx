@@ -6,8 +6,8 @@ import { BusinessTable } from "./business-table"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, TrendingUp, ArrowUpDown, LayoutGrid, TableProperties, CheckSquare } from "lucide-react"
-import { saveDuellyScan as dbSaveDuellyScan, saveAnalysis as dbSaveAnalysis, saveEmails as dbSaveEmails } from "@/lib/db"
+import { Loader2, TrendingUp, ArrowUpDown, LayoutGrid, TableProperties, CheckSquare, Star, Flame, Ban, Mail } from "lucide-react"
+import { saveDuellyScan as dbSaveDuellyScan, saveAnalysis as dbSaveAnalysis, saveEmails as dbSaveEmails, updateBusinessStatus, type BusinessStatus } from "@/lib/db"
 
 interface BusinessGridProps {
   businesses: CardBusiness[]
@@ -148,6 +148,57 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
     await runBatchScan(toScan)
   }
 
+  // --- Bulk status change ---
+  const [bulkUpdating, setBulkUpdating] = useState(false)
+
+  const handleBulkStatus = async (newStatus: BusinessStatus) => {
+    if (selectedIds.size === 0) return
+    setBulkUpdating(true)
+    const ids = Array.from(selectedIds)
+    await Promise.allSettled(ids.map((id) => updateBusinessStatus(id, newStatus)))
+    setBulkUpdating(false)
+    setSelectedIds(new Set())
+    setSelectMode(false)
+    onProspectChange?.()
+  }
+
+  // --- Bulk find emails ---
+  const [findingEmails, setFindingEmails] = useState(false)
+  const [emailProgress, setEmailProgress] = useState({ done: 0, total: 0, found: 0 })
+
+  const handleBulkFindEmails = async () => {
+    const targets = Array.from(selectedIds)
+      .map((id) => businesses.find((b) => b.id === id))
+      .filter((b): b is CardBusiness => !!b && (!b.emails || b.emails.length === 0))
+    if (targets.length === 0) return
+
+    setFindingEmails(true)
+    setEmailProgress({ done: 0, total: targets.length, found: 0 })
+    let found = 0
+
+    for (let i = 0; i < targets.length; i++) {
+      const b = targets[i]
+      try {
+        const res = await fetch("/api/find-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ businessName: b.name, address: b.address }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.emails?.length) {
+            const merged = await dbSaveEmails(b.id, data.emails, b.emails || [])
+            onBusinessUpdate?.(b.id, { emails: merged })
+            found++
+          }
+        }
+      } catch {}
+      setEmailProgress({ done: i + 1, total: targets.length, found })
+    }
+
+    setFindingEmails(false)
+  }
+
   const sorted = useMemo(() => {
     const list = [...businesses]
     if (sortBy === "seo-worst") list.sort((a, b) => (a.duellyScan?.seoScore ?? 999) - (b.duellyScan?.seoScore ?? 999))
@@ -196,19 +247,63 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
 
           {/* Scan selected */}
           {selectMode && selectedIds.size > 0 && (
-            <Button
-              variant="outline" size="sm"
-              onClick={handleScanSelectedClick}
-              disabled={scanningAll || selectedWithWebsite === 0}
-              style={!scanningAll ? { borderColor: "#00A6BF", color: "#00A6BF" } : {}}
-              className="gap-1.5"
-            >
-              {scanningAll && scanTarget === "selected" ? (
-                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Auditing {scanProgress.done}/{scanProgress.total}</>
-              ) : (
-                <><TrendingUp className="w-3.5 h-3.5" /> SEO Audit Selected ({selectedWithWebsite})</>
-              )}
-            </Button>
+            <>
+              <Button
+                variant="outline" size="sm"
+                onClick={handleScanSelectedClick}
+                disabled={scanningAll || selectedWithWebsite === 0}
+                style={!scanningAll ? { borderColor: "#00A6BF", color: "#00A6BF" } : {}}
+                className="gap-1.5"
+              >
+                {scanningAll && scanTarget === "selected" ? (
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Auditing {scanProgress.done}/{scanProgress.total}</>
+                ) : (
+                  <><TrendingUp className="w-3.5 h-3.5" /> SEO Audit Selected ({selectedWithWebsite})</>
+                )}
+              </Button>
+
+              {/* Bulk find emails */}
+              <Button
+                variant="outline" size="sm"
+                onClick={handleBulkFindEmails}
+                disabled={findingEmails}
+                className="gap-1.5"
+              >
+                {findingEmails ? (
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Finding {emailProgress.done}/{emailProgress.total} ({emailProgress.found} found)</>
+                ) : (
+                  <><Mail className="w-3.5 h-3.5" /> Find Emails</>
+                )}
+              </Button>
+
+              {/* Bulk status */}
+              <div className="flex items-center gap-1 border-l border-border pl-3">
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => handleBulkStatus("prospect")}
+                  disabled={bulkUpdating}
+                  className="gap-1 text-xs h-7 px-2"
+                >
+                  <Star className="w-3 h-3" /> Prospect
+                </Button>
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => handleBulkStatus("priority")}
+                  disabled={bulkUpdating}
+                  className="gap-1 text-xs h-7 px-2"
+                >
+                  <Flame className="w-3 h-3" /> Priority
+                </Button>
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => handleBulkStatus("dismissed")}
+                  disabled={bulkUpdating}
+                  className="gap-1 text-xs h-7 px-2 text-destructive hover:text-destructive"
+                >
+                  <Ban className="w-3 h-3" /> Dismiss
+                </Button>
+              </div>
+            </>
           )}
 
           <Select value={sortBy} onValueChange={setSortBy}>
