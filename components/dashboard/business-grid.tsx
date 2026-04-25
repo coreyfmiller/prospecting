@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { LeadCard, type CardBusiness } from "./lead-card"
+import { BusinessTable } from "./business-table"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, TrendingUp, ArrowUpDown } from "lucide-react"
+import { Loader2, TrendingUp, ArrowUpDown, LayoutGrid, TableProperties, CheckSquare } from "lucide-react"
 import { saveDuellyScan as dbSaveDuellyScan, saveAnalysis as dbSaveAnalysis, saveEmails as dbSaveEmails } from "@/lib/db"
 
 interface BusinessGridProps {
@@ -22,37 +24,64 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
   const [scanProgress, setScanProgress] = useState({ done: 0, total: 0 })
   const [scanningIds, setScanningIds] = useState<Set<string>>(new Set())
   const [showScanConfirm, setShowScanConfirm] = useState(false)
+  const [scanTarget, setScanTarget] = useState<"all" | "selected">("all")
   const [scanAllCount, setScanAllCount] = useState(0)
   const [noWebsiteCount, setNoWebsiteCount] = useState(0)
   const [scanSummary, setScanSummary] = useState<{ total: number; lowSeo: number; lowGeo: number; avgSeo: number; avgGeo: number; failed: number } | null>(null)
   const [sortBy, setSortBy] = useState<string>("default")
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards")
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [selectMode, setSelectMode] = useState(false)
 
   const withWebsites = useMemo(() => businesses.filter((b) => (b.webPresence === "website" || b.hasWebsite) && b.website), [businesses])
 
-  const handleScanAllClick = () => {
-    const needsScan = withWebsites.filter((b) => {
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }, [])
+
+  const toggleAll = useCallback(() => {
+    if (selectedIds.size === businesses.length) setSelectedIds(new Set())
+    else setSelectedIds(new Set(businesses.map((b) => b.id)))
+  }, [businesses, selectedIds.size])
+
+  const getScanCandidates = (ids?: Set<string>) => {
+    const pool = ids ? businesses.filter((b) => ids.has(b.id)) : withWebsites
+    return pool.filter((b) => {
+      if (!b.website || (b.webPresence !== "website" && !b.hasWebsite)) return false
       const scan = b.duellyScan
       if (!scan?.scannedAt) return true
-      const age = Date.now() - new Date(scan.scannedAt).getTime()
-      return age > 30 * 24 * 60 * 60 * 1000
+      return Date.now() - new Date(scan.scannedAt).getTime() > 30 * 24 * 60 * 60 * 1000
     })
+  }
+
+  const handleScanAllClick = () => {
+    const needsScan = getScanCandidates()
     const noSite = businesses.filter((b) => b.webPresence !== "website" && !b.hasWebsite)
     setScanAllCount(needsScan.length)
     setNoWebsiteCount(noSite.length)
+    setScanTarget("all")
     if (needsScan.length === 0) return
     setShowScanConfirm(true)
   }
 
-  const handleScanAllConfirm = async () => {
-    setShowScanConfirm(false)
-    const toScan = withWebsites.filter((b) => {
-      const scan = b.duellyScan
-      if (!scan?.scannedAt) return true
-      const age = Date.now() - new Date(scan.scannedAt).getTime()
-      return age > 30 * 24 * 60 * 60 * 1000
+  const handleScanSelectedClick = () => {
+    const needsScan = getScanCandidates(selectedIds)
+    const noSite = Array.from(selectedIds).filter((id) => {
+      const b = businesses.find((biz) => biz.id === id)
+      return b && b.webPresence !== "website" && !b.hasWebsite
     })
-    if (toScan.length === 0) return
+    setScanAllCount(needsScan.length)
+    setNoWebsiteCount(noSite.length)
+    setScanTarget("selected")
+    if (needsScan.length === 0) return
+    setShowScanConfirm(true)
+  }
 
+  const runBatchScan = async (toScan: CardBusiness[]) => {
     setScanningAll(true)
     setScanProgress({ done: 0, total: toScan.length })
     setScanSummary(null)
@@ -74,7 +103,6 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
               fetch("/api/duelly-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: b.website }) }),
               fetch("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: b.website }) }),
             ])
-
             if (scanRes.status === "fulfilled" && scanRes.value.ok) {
               const scanData = await scanRes.value.json()
               results.push({ seoScore: scanData.seoScore, geoScore: scanData.geoScore })
@@ -85,14 +113,11 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
               onBusinessUpdate?.(b.id, { scanError: errMsg })
               failed++
             }
-
             if (analyzeRes.status === "fulfilled" && analyzeRes.value.ok) {
               const analyzeData = await analyzeRes.value.json()
               dbSaveAnalysis(b.id, analyzeData)
               onBusinessUpdate?.(b.id, { analysis: analyzeData })
-              if (analyzeData.emails?.length) {
-                dbSaveEmails(b.id, analyzeData.emails, b.emails || [])
-              }
+              if (analyzeData.emails?.length) dbSaveEmails(b.id, analyzeData.emails, b.emails || [])
             }
           } catch {
             failed++
@@ -116,6 +141,13 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
     setScanningIds(new Set())
   }
 
+  const handleScanConfirm = async () => {
+    setShowScanConfirm(false)
+    const toScan = scanTarget === "selected" ? getScanCandidates(selectedIds) : getScanCandidates()
+    if (toScan.length === 0) return
+    await runBatchScan(toScan)
+  }
+
   const sorted = useMemo(() => {
     const list = [...businesses]
     if (sortBy === "seo-worst") list.sort((a, b) => (a.duellyScan?.seoScore ?? 999) - (b.duellyScan?.seoScore ?? 999))
@@ -124,6 +156,13 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
     else if (sortBy === "geo-best") list.sort((a, b) => (b.duellyScan?.geoScore ?? -1) - (a.duellyScan?.geoScore ?? -1))
     return list
   }, [businesses, sortBy])
+
+  const selectedWithWebsite = useMemo(() => {
+    return Array.from(selectedIds).filter((id) => {
+      const b = businesses.find((biz) => biz.id === id)
+      return b && (b.webPresence === "website" || b.hasWebsite) && b.website
+    }).length
+  }, [selectedIds, businesses])
 
   return (
     <div className="space-y-4">
@@ -137,12 +176,40 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
             style={!scanningAll ? { borderColor: "#00A6BF", color: "#00A6BF" } : {}}
             className="gap-1.5"
           >
-            {scanningAll ? (
+            {scanningAll && scanTarget === "all" ? (
               <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Auditing {scanProgress.done}/{scanProgress.total}</>
             ) : (
               <><TrendingUp className="w-3.5 h-3.5" /> SEO Audit All</>
             )}
           </Button>
+
+          {/* Select mode toggle */}
+          <Button
+            variant={selectMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => { setSelectMode(!selectMode); if (selectMode) setSelectedIds(new Set()) }}
+            className="gap-1.5"
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            {selectMode ? `${selectedIds.size} Selected` : "Select"}
+          </Button>
+
+          {/* Scan selected */}
+          {selectMode && selectedIds.size > 0 && (
+            <Button
+              variant="outline" size="sm"
+              onClick={handleScanSelectedClick}
+              disabled={scanningAll || selectedWithWebsite === 0}
+              style={!scanningAll ? { borderColor: "#00A6BF", color: "#00A6BF" } : {}}
+              className="gap-1.5"
+            >
+              {scanningAll && scanTarget === "selected" ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Auditing {scanProgress.done}/{scanProgress.total}</>
+              ) : (
+                <><TrendingUp className="w-3.5 h-3.5" /> SEO Audit Selected ({selectedWithWebsite})</>
+              )}
+            </Button>
+          )}
 
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[180px] h-8 text-xs">
@@ -157,6 +224,24 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
               <SelectItem value="geo-best">AI Visibility: Best First</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* View toggle */}
+          <div className="flex items-center border border-border rounded-md ml-auto">
+            <button
+              onClick={() => setViewMode("cards")}
+              className={`p-1.5 rounded-l-md transition-colors ${viewMode === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+              title="Card view"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1.5 rounded-r-md transition-colors ${viewMode === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+              title="Table view"
+            >
+              <TableProperties className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -170,7 +255,7 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
             </p>
             {noWebsiteCount > 0 && (
               <p className="text-sm text-muted-foreground mb-1">
-                {noWebsiteCount} businesses don't have websites and can't be scanned.
+                {noWebsiteCount} {scanTarget === "selected" ? "selected " : ""}businesses don't have websites and can't be scanned.
               </p>
             )}
             <p className="text-sm text-muted-foreground mb-4">
@@ -178,7 +263,7 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
             </p>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" size="sm" onClick={() => setShowScanConfirm(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleScanAllConfirm} style={{ backgroundColor: "#00A6BF" }}>Audit {scanAllCount} Sites</Button>
+              <Button size="sm" onClick={handleScanConfirm} style={{ backgroundColor: "#00A6BF" }}>Audit {scanAllCount} Sites</Button>
             </div>
           </div>
         </div>
@@ -198,22 +283,47 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
         </div>
       )}
 
-      {/* Business Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {sorted.map((business) => (
-          <LeadCard
-            key={business.id}
-            business={business}
-            onProspectChange={onProspectChange}
-            onBlock={onBlock}
-            scanningExternal={scanningIds.has(business.id)}
-            customServiceTags={customServiceTags}
-            customPipelineStages={customPipelineStages}
-          />
-        ))}
-      </div>
+      {/* Content */}
+      {viewMode === "cards" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {sorted.map((business) => (
+            <div key={business.id} className="relative">
+              {selectMode && (
+                <div className="absolute top-3 right-3 z-10">
+                  <Checkbox
+                    checked={selectedIds.has(business.id)}
+                    onCheckedChange={() => toggleSelect(business.id)}
+                    className="h-5 w-5 border-2 bg-background shadow-sm"
+                  />
+                </div>
+              )}
+              <div
+                className={selectMode ? "cursor-pointer" : ""}
+                onClick={selectMode ? () => toggleSelect(business.id) : undefined}
+              >
+                <LeadCard
+                  business={business}
+                  onProspectChange={onProspectChange}
+                  onBlock={onBlock}
+                  scanningExternal={scanningIds.has(business.id)}
+                  customServiceTags={customServiceTags}
+                  customPipelineStages={customPipelineStages}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <BusinessTable
+          businesses={sorted}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onToggleAll={toggleAll}
+          scanningIds={scanningIds}
+        />
+      )}
 
-      {sorted.length === 0 && (
+      {sorted.length === 0 && viewMode === "cards" && (
         <p className="text-center text-muted-foreground py-8">No businesses to display</p>
       )}
     </div>
