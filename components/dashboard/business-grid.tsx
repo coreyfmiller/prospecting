@@ -255,10 +255,12 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
 
   const sorted = useMemo(() => {
     const list = [...businesses]
+    const presenceOrder: Record<string, number> = { website: 0, "facebook-only": 1, "social-only": 2, none: 3 }
     if (sortBy === "seo-worst") list.sort((a, b) => (a.duellyScan?.seoScore ?? 999) - (b.duellyScan?.seoScore ?? 999))
     else if (sortBy === "seo-best") list.sort((a, b) => (b.duellyScan?.seoScore ?? -1) - (a.duellyScan?.seoScore ?? -1))
     else if (sortBy === "geo-worst") list.sort((a, b) => (a.duellyScan?.geoScore ?? 999) - (b.duellyScan?.geoScore ?? 999))
     else if (sortBy === "geo-best") list.sort((a, b) => (b.duellyScan?.geoScore ?? -1) - (a.duellyScan?.geoScore ?? -1))
+    else list.sort((a, b) => (presenceOrder[a.webPresence || "none"] ?? 3) - (presenceOrder[b.webPresence || "none"] ?? 3))
     return list
   }, [businesses, sortBy])
 
@@ -337,7 +339,7 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
               <SelectValue placeholder="Sort results" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="default">Default Order</SelectItem>
+              <SelectItem value="default">Web Presence</SelectItem>
               <SelectItem value="seo-worst">SEO: Worst First</SelectItem>
               <SelectItem value="seo-best">SEO: Best First</SelectItem>
               <SelectItem value="geo-worst">AI Visibility: Worst First</SelectItem>
