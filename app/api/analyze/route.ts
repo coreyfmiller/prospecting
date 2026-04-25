@@ -66,7 +66,6 @@ const OUTDATED_SIGNALS: Record<string, RegExp> = {
   "Bootstrap 2/3": /bootstrap[\/.-](2|3)\./i,
   "Table-based layout": /<table[^>]*width=["']100%/i,
   "Inline styles heavy": /style="/gi,
-  "No viewport meta": /VIEWPORT_CHECK/,
   "Missing doctype": /DOCTYPE_CHECK/,
 }
 
@@ -94,7 +93,6 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
   let platform: string | undefined
   let copyrightYear: number | undefined
   let isYellowPages = false
-  let isMobileFriendly = true
   let hasSSL = url.startsWith("https")
 
   let html = ""
@@ -116,13 +114,8 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
         crawlData = await crawlRes.json()
         html = crawlData.thinnedText || crawlData.summarizedContent || ""
         hasSSL = crawlData.technical?.isHttps ?? hasSSL
-        // Only flag as not mobile-friendly if crawl worker got real content and viewport is missing
-        const gotRealContent = (crawlData.structuralData?.wordCount || 0) > 50
-        if (gotRealContent) {
-          isMobileFriendly = crawlData.metaChecks?.hasViewport ?? true
-          if (!crawlData.metaChecks?.hasViewport) flags.push("No mobile viewport tag detected")
-        }
         // If crawl worker returned empty content, mark as limited
+        const gotRealContent = (crawlData.structuralData?.wordCount || 0) > 50
         if (!gotRealContent) {
           crawlData = null // fall through to basic fetch
           console.log("Crawl worker returned thin content, falling back to fetch")
@@ -165,18 +158,13 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
           }
         } catch {}
         if (html.includes("Just a moment") || html.includes("challenge-platform")) {
-          return { isYellowPages: false, isMobileFriendly: false, hasSSL, technologies, flags: ["Bot protection detected"], summary: "This site has bot protection that prevents automated analysis.", emails: [] }
+          return { isYellowPages: false, hasSSL, technologies, flags: ["Bot protection detected"], summary: "This site has bot protection that prevents automated analysis.", emails: [] }
         }
       }
 
-      // Check viewport for basic fetch path — only if we got substantial HTML
-      if (html.length > 5000) {
-        const hasViewport = /<meta[^>]*name=["']viewport["']/i.test(html)
-        if (!hasViewport) { isMobileFriendly = false; flags.push("No mobile viewport tag detected") }
-      }
     } catch (err: any) {
       flags.push(err.name === "AbortError" ? "Site took too long to respond" : "Could not reach site")
-      return { isYellowPages: false, isMobileFriendly: false, hasSSL, technologies, flags, summary: "Could not reach this website to analyze it.", emails: [] }
+      return { isYellowPages: false, hasSSL, technologies, flags, summary: "Could not reach this website to analyze it.", emails: [] }
     }
   }
 
@@ -209,13 +197,6 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
       const major = parseFloat(wpVersion[1])
       if (major < 5) flags.push(`Outdated WordPress (${wpVersion[1]})`)
     }
-  }
-
-  // Check mobile friendliness
-  const hasViewport = /<meta[^>]*name=["']viewport["']/i.test(html)
-  if (!hasViewport) {
-    isMobileFriendly = false
-    flags.push("No mobile viewport tag")
   }
 
   // Check for outdated tech
@@ -283,7 +264,7 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
 
   // AI Assessment via Gemini
   const aiAssessment = await assessWithGemini(html, {
-    platform, estimatedAge, hasSSL, isMobileFriendly, flags, crawlData,
+    platform, estimatedAge, hasSSL, flags, crawlData,
   })
 
   // Build summary
@@ -292,7 +273,6 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
     estimatedAge,
     copyrightYear,
     isYellowPages,
-    isMobileFriendly,
     hasSSL,
     flags,
     technologies,
@@ -303,7 +283,7 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
     copyrightYear,
     platform: crawlData?.platformDetection?.platform || platform,
     isYellowPages,
-    isMobileFriendly,
+    isMobileFriendly: true,
     hasSSL,
     technologies,
     flags,
@@ -363,7 +343,6 @@ function buildSummary(data: {
   estimatedAge?: string
   copyrightYear?: number
   isYellowPages: boolean
-  isMobileFriendly: boolean
   hasSSL: boolean
   flags: string[]
   technologies: string[]
@@ -384,13 +363,9 @@ function buildSummary(data: {
     parts.push("No SSL certificate (not secure).")
   }
 
-  if (!data.isMobileFriendly) {
-    parts.push("Not mobile-friendly.")
-  }
-
   if (data.flags.length > 0) {
     const issueFlags = data.flags.filter(
-      (f) => !f.includes("mobile") && !f.includes("SSL")
+      (f) => !f.includes("SSL")
     )
     if (issueFlags.length > 0) {
       parts.push(`Issues: ${issueFlags.join(", ")}.`)
@@ -406,7 +381,7 @@ function buildSummary(data: {
 
 async function assessWithGemini(
   html: string,
-  context: { platform?: string; estimatedAge?: string; hasSSL: boolean; isMobileFriendly: boolean; flags: string[]; crawlData?: any }
+  context: { platform?: string; estimatedAge?: string; hasSSL: boolean; flags: string[]; crawlData?: any }
 ): Promise<SiteAnalysis["aiAssessment"]> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) return undefined
@@ -442,7 +417,7 @@ NOTE: The full page content could not be retrieved (bot protection, JavaScript-h
             parts: [{
               text: `You are a senior web design and digital marketing consultant evaluating a local business website. Give a thorough, actionable assessment that a web agency could use to pitch their services.
 
-IMPORTANT: Only make claims you can support from the actual content provided. If the HTML content is thin, empty, or appears to be a bot-protection page, acknowledge that the analysis is limited. Do NOT claim a site is "not mobile-friendly" or "missing content" if you simply couldn't access the full page. Many modern sites render via JavaScript and may appear empty in raw HTML.
+IMPORTANT: Only make claims you can support from the actual content provided. If the HTML content is thin, empty, or appears to be a bot-protection page, acknowledge that the analysis is limited. Do NOT claim a site is "missing content" if you simply couldn't access the full page. Many modern sites render via JavaScript and may appear empty in raw HTML.
 
 Here is the website content (trimmed):
 ${trimmedHtml}
@@ -451,7 +426,6 @@ Technical context:
 - Platform: ${context.platform || "Unknown"}
 - Estimated age: ${context.estimatedAge || "Unknown"}
 - Has SSL: ${context.hasSSL}
-- Mobile friendly: ${context.isMobileFriendly}
 - Technical issues: ${context.flags.join(", ") || "None"}
 - Data quality: ${hasLimitedData ? "LIMITED — crawl may have failed, be conservative in scoring" : "Good — full page content available"}${crawlContext}
 
