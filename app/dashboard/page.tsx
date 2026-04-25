@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Globe, XCircle, Facebook, Star, Flame, Ban, SearchCheck,
-  Building2, BarChart3, Paintbrush, Bot, Search as SearchIcon, Trash2,
+  Building2, BarChart3, Paintbrush, Bot, Search as SearchIcon, Trash2, Zap,
 } from "lucide-react"
-import { getBusinesses, getStats, getReports, clearProjectData, SERVICE_TAGS, type DbBusiness } from "@/lib/db"
+import { getBusinesses, getStats, getReports, clearProjectData, SERVICE_TAGS, getCredits, getCreditHistory, type DbBusiness, type CreditTransaction } from "@/lib/db"
 import Link from "next/link"
 
 export default function DashboardPage() {
@@ -18,13 +18,19 @@ export default function DashboardPage() {
   const [recentSearches, setRecentSearches] = useState<{ query: string; date: string; count: number }[]>([])
   const [topCategories, setTopCategories] = useState<{ name: string; count: number }[]>([])
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [credits, setCredits] = useState<number>(0)
+  const [creditHistory, setCreditHistory] = useState<CreditTransaction[]>([])
 
   const loadData = async () => {
     const s = await getStats()
     const b = await getBusinesses()
     const r = await getReports()
+    const c = await getCredits()
+    const ch = await getCreditHistory(10)
     setStats(s)
     setBusinesses(b)
+    setCredits(c)
+    setCreditHistory(ch)
 
     const seen = new Set<string>()
     const recent = r.filter((rep: any) => {
@@ -148,6 +154,13 @@ export default function DashboardPage() {
                 <p className="text-xs text-muted-foreground">Analyzed</p>
               </CardContent>
             </Card>
+            <Card className="border-amber-200 dark:border-amber-800">
+              <CardContent className="p-4 text-center">
+                <Zap className="w-5 h-5 mx-auto mb-1 text-amber-500" />
+                <p className="text-2xl font-bold">{credits}</p>
+                <p className="text-xs text-muted-foreground">Credits</p>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -250,6 +263,30 @@ export default function DashboardPage() {
                     <div key={i} className="flex justify-between items-center">
                       <span className="text-sm truncate">{s.query}</span>
                       <span className="text-xs text-muted-foreground shrink-0 ml-2">{s.count} results · {s.date}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Credit History */}
+            {creditHistory.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-500" /> Recent Credit Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {creditHistory.map((tx) => (
+                    <div key={tx.id} className="flex justify-between items-center">
+                      <div className="min-w-0">
+                        <p className="text-sm truncate">{tx.business_name || tx.reason}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <Badge variant={tx.amount > 0 ? "secondary" : "outline"} className={tx.amount > 0 ? "text-green-600" : ""}>
+                        {tx.amount > 0 ? "+" : ""}{tx.amount}
+                      </Badge>
                     </div>
                   ))}
                 </CardContent>

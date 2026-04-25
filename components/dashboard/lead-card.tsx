@@ -145,11 +145,21 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
   useEffect(() => {
     if (business.duellyScan && !duellyScan) setDuellyScan(business.duellyScan)
   }, [business.duellyScan])
+  useEffect(() => {
+    if (business.analysis && !analysis) setAnalysis(business.analysis)
+  }, [business.analysis])
+  useEffect(() => {
+    if (business.gbpAudit && !gbpAudit) setGbpAudit(business.gbpAudit)
+  }, [business.gbpAudit])
+  useEffect(() => {
+    if (business.emails && business.emails.length > emails.length) setEmails(business.emails)
+  }, [business.emails])
   const [duellyCooldown, setDuellyCooldown] = useState(0)
   const [gbpAudit, setGbpAudit] = useState<GBPAudit | null>(business.gbpAudit || null)
   const [scanningGBP, setScanningGBP] = useState(false)
   const [generatingReport, setGeneratingReport] = useState(false)
   const [showEmailModal, setShowEmailModal] = useState(false)
+  const [showGBP, setShowGBP] = useState(false)
   const [emailDraft, setEmailDraft] = useState("")
   const [emailPitchType, setEmailPitchType] = useState("general")
   const [generatingEmail, setGeneratingEmail] = useState(false)
@@ -413,19 +423,26 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
         </Button>
         {gbpAudit && (
           <div className="space-y-2 p-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center justify-between">
+            <button onClick={() => setShowGBP(!showGBP)} className="w-full flex items-center justify-between">
               <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><MapPinned className="w-3.5 h-3.5 text-blue-500" /> Google Business Score</p>
-              <span className={`text-sm font-bold ${gbpAudit.completenessScore >= 70 ? "text-green-600" : gbpAudit.completenessScore >= 40 ? "text-amber-500" : "text-red-500"}`}>{gbpAudit.completenessScore}/100</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1 text-xs">
-              <span className={gbpAudit.hasHours ? "text-green-600" : "text-red-500"}>{gbpAudit.hasHours ? "✓" : "✗"} Hours</span>
-              <span className={gbpAudit.hasPhone ? "text-green-600" : "text-red-500"}>{gbpAudit.hasPhone ? "✓" : "✗"} Phone</span>
-              <span className={gbpAudit.hasWebsite ? "text-green-600" : "text-red-500"}>{gbpAudit.hasWebsite ? "✓" : "✗"} Website</span>
-              <span className={gbpAudit.hasDescription ? "text-green-600" : "text-red-500"}>{gbpAudit.hasDescription ? "✓" : "✗"} Description</span>
-              <span className={gbpAudit.photoCount >= 5 ? "text-green-600" : gbpAudit.photoCount > 0 ? "text-amber-500" : "text-red-500"}>{gbpAudit.photoCount > 0 ? "✓" : "✗"} {gbpAudit.photoCount} Photos</span>
-              <span className={gbpAudit.reviewCount >= 5 ? "text-green-600" : gbpAudit.reviewCount > 0 ? "text-amber-500" : "text-red-500"}>{gbpAudit.reviewCount > 0 ? "✓" : "✗"} {gbpAudit.reviewCount} Reviews</span>
-            </div>
-            {gbpAudit.issues?.length > 0 && <div className="text-xs text-muted-foreground">{gbpAudit.issues.slice(0, 3).map((issue, i) => <p key={i}>• {issue}</p>)}</div>}
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-bold ${gbpAudit.completenessScore >= 70 ? "text-green-600" : gbpAudit.completenessScore >= 40 ? "text-amber-500" : "text-red-500"}`}>{gbpAudit.completenessScore}/100</span>
+                <span className="text-xs text-muted-foreground">{showGBP ? "▲" : "▼"}</span>
+              </div>
+            </button>
+            {showGBP && (
+              <>
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  <span className={gbpAudit.hasHours ? "text-green-600" : "text-red-500"}>{gbpAudit.hasHours ? "✓" : "✗"} Hours</span>
+                  <span className={gbpAudit.hasPhone ? "text-green-600" : "text-red-500"}>{gbpAudit.hasPhone ? "✓" : "✗"} Phone</span>
+                  <span className={gbpAudit.hasWebsite ? "text-green-600" : "text-red-500"}>{gbpAudit.hasWebsite ? "✓" : "✗"} Website</span>
+                  <span className={gbpAudit.hasDescription ? "text-green-600" : "text-red-500"}>{gbpAudit.hasDescription ? "✓" : "✗"} Description</span>
+                  <span className={gbpAudit.photoCount >= 5 ? "text-green-600" : gbpAudit.photoCount > 0 ? "text-amber-500" : "text-red-500"}>{gbpAudit.photoCount > 0 ? "✓" : "✗"} {gbpAudit.photoCount} Photos</span>
+                  <span className={gbpAudit.reviewCount >= 5 ? "text-green-600" : gbpAudit.reviewCount > 0 ? "text-amber-500" : "text-red-500"}>{gbpAudit.reviewCount > 0 ? "✓" : "✗"} {gbpAudit.reviewCount} Reviews</span>
+                </div>
+                {gbpAudit.issues?.length > 0 && <div className="text-xs text-muted-foreground">{gbpAudit.issues.slice(0, 3).map((issue, i) => <p key={i}>• {issue}</p>)}</div>}
+              </>
+            )}
           </div>
         )}
 
