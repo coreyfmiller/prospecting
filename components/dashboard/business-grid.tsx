@@ -6,7 +6,7 @@ import { BusinessTable } from "./business-table"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, TrendingUp, ArrowUpDown, LayoutGrid, TableProperties, CheckSquare, Star, Flame, Ban, Mail, Zap } from "lucide-react"
+import { Loader2, TrendingUp, ArrowUpDown, LayoutGrid, TableProperties, Star, Flame, Ban, Mail, Zap } from "lucide-react"
 import { saveDuellyScan as dbSaveDuellyScan, saveAnalysis as dbSaveAnalysis, saveEmails as dbSaveEmails, updateBusinessStatus, deductCredits, refundCredits, getCredits, type BusinessStatus } from "@/lib/db"
 
 interface BusinessGridProps {
@@ -31,7 +31,6 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
   const [sortBy, setSortBy] = useState<string>("default")
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [selectMode, setSelectMode] = useState(false)
   const [creditBalance, setCreditBalance] = useState<number | null>(null)
   const [insufficientCredits, setInsufficientCredits] = useState(false)
 
@@ -214,7 +213,6 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
     await Promise.allSettled(ids.map((id) => updateBusinessStatus(id, newStatus)))
     setBulkUpdating(false)
     setSelectedIds(new Set())
-    setSelectMode(false)
     onProspectChange?.()
   }
 
@@ -286,23 +284,11 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
             {scanningAll && scanTarget === "all" ? (
               <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Auditing {scanProgress.done}/{scanProgress.total}</>
             ) : (
-              <><TrendingUp className="w-3.5 h-3.5" /> Full Audit All</>
+              <><TrendingUp className="w-3.5 h-3.5" /> Audit All</>
             )}
           </Button>
 
-          {/* Select mode toggle */}
-          <Button
-            variant={selectMode ? "default" : "outline"}
-            size="sm"
-            onClick={() => { setSelectMode(!selectMode); if (selectMode) setSelectedIds(new Set()) }}
-            className="gap-1.5"
-          >
-            <CheckSquare className="w-3.5 h-3.5" />
-            {selectMode ? `${selectedIds.size} Selected` : "Select"}
-          </Button>
-
-          {/* Scan selected */}
-          {selectMode && selectedIds.size > 0 && (
+          {selectedIds.size > 0 && (
             <>
               <Button
                 variant="outline" size="sm"
@@ -314,11 +300,10 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
                 {scanningAll && scanTarget === "selected" ? (
                   <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Auditing {scanProgress.done}/{scanProgress.total}</>
                 ) : (
-                  <><TrendingUp className="w-3.5 h-3.5" /> Full Audit Selected ({selectedWithWebsite})</>
+                  <><TrendingUp className="w-3.5 h-3.5" /> Audit Selected ({selectedIds.size})</>
                 )}
               </Button>
 
-              {/* Bulk find emails */}
               <Button
                 variant="outline" size="sm"
                 onClick={handleBulkFindEmails}
@@ -328,34 +313,18 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
                 {findingEmails ? (
                   <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Finding {emailProgress.done}/{emailProgress.total} ({emailProgress.found} found)</>
                 ) : (
-                  <><Mail className="w-3.5 h-3.5" /> Find Emails</>
+                  <><Mail className="w-3.5 h-3.5" /> Find Emails ({selectedIds.size})</>
                 )}
               </Button>
 
-              {/* Bulk status */}
               <div className="flex items-center gap-1 border-l border-border pl-3">
-                <Button
-                  variant="outline" size="sm"
-                  onClick={() => handleBulkStatus("prospect")}
-                  disabled={bulkUpdating}
-                  className="gap-1 text-xs h-7 px-2"
-                >
+                <Button variant="outline" size="sm" onClick={() => handleBulkStatus("prospect")} disabled={bulkUpdating} className="gap-1 text-xs h-7 px-2">
                   <Star className="w-3 h-3" /> Prospect
                 </Button>
-                <Button
-                  variant="outline" size="sm"
-                  onClick={() => handleBulkStatus("priority")}
-                  disabled={bulkUpdating}
-                  className="gap-1 text-xs h-7 px-2"
-                >
+                <Button variant="outline" size="sm" onClick={() => handleBulkStatus("priority")} disabled={bulkUpdating} className="gap-1 text-xs h-7 px-2">
                   <Flame className="w-3 h-3" /> Priority
                 </Button>
-                <Button
-                  variant="outline" size="sm"
-                  onClick={() => handleBulkStatus("dismissed")}
-                  disabled={bulkUpdating}
-                  className="gap-1 text-xs h-7 px-2 text-destructive hover:text-destructive"
-                >
+                <Button variant="outline" size="sm" onClick={() => handleBulkStatus("dismissed")} disabled={bulkUpdating} className="gap-1 text-xs h-7 px-2 text-destructive hover:text-destructive">
                   <Ban className="w-3 h-3" /> Dismiss
                 </Button>
               </div>
@@ -376,20 +345,11 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
             </SelectContent>
           </Select>
 
-          {/* View toggle */}
           <div className="flex items-center border border-border rounded-md ml-auto">
-            <button
-              onClick={() => setViewMode("cards")}
-              className={`p-1.5 rounded-l-md transition-colors ${viewMode === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-              title="Card view"
-            >
+            <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded-l-md transition-colors ${viewMode === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`} title="Card view">
               <LayoutGrid className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => setViewMode("table")}
-              className={`p-1.5 rounded-r-md transition-colors ${viewMode === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-              title="Table view"
-            >
+            <button onClick={() => setViewMode("table")} className={`p-1.5 rounded-r-md transition-colors ${viewMode === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`} title="Table view">
               <TableProperties className="w-4 h-4" />
             </button>
           </div>
@@ -453,28 +413,21 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {sorted.map((business) => (
             <div key={business.id} className="relative">
-              {selectMode && (
-                <div className="absolute top-3 right-3 z-10">
-                  <Checkbox
-                    checked={selectedIds.has(business.id)}
-                    onCheckedChange={() => toggleSelect(business.id)}
-                    className="h-5 w-5 border-2 bg-background shadow-sm"
-                  />
-                </div>
-              )}
-              <div
-                className={selectMode ? "cursor-pointer" : ""}
-                onClick={selectMode ? () => toggleSelect(business.id) : undefined}
-              >
-                <LeadCard
-                  business={business}
-                  onProspectChange={onProspectChange}
-                  onBlock={onBlock}
-                  scanningExternal={scanningIds.has(business.id)}
-                  customServiceTags={customServiceTags}
-                  customPipelineStages={customPipelineStages}
+              <div className="absolute top-3 right-3 z-10">
+                <Checkbox
+                  checked={selectedIds.has(business.id)}
+                  onCheckedChange={() => toggleSelect(business.id)}
+                  className="h-5 w-5 border-2 bg-background shadow-sm"
                 />
               </div>
+              <LeadCard
+                business={business}
+                onProspectChange={onProspectChange}
+                onBlock={onBlock}
+                scanningExternal={scanningIds.has(business.id)}
+                customServiceTags={customServiceTags}
+                customPipelineStages={customPipelineStages}
+              />
             </div>
           ))}
         </div>
