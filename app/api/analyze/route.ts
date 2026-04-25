@@ -114,10 +114,19 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
       })
       if (crawlRes.ok) {
         crawlData = await crawlRes.json()
-        html = crawlData.thinnedText || ""
+        html = crawlData.thinnedText || crawlData.summarizedContent || ""
         hasSSL = crawlData.technical?.isHttps ?? hasSSL
-        isMobileFriendly = crawlData.metaChecks?.hasViewport ?? true
-        if (!crawlData.metaChecks?.hasViewport) flags.push("No mobile viewport tag")
+        // Only flag as not mobile-friendly if crawl worker got real content and viewport is missing
+        const gotRealContent = (crawlData.structuralData?.wordCount || 0) > 50
+        if (gotRealContent) {
+          isMobileFriendly = crawlData.metaChecks?.hasViewport ?? true
+          if (!crawlData.metaChecks?.hasViewport) flags.push("No mobile viewport tag detected")
+        }
+        // If crawl worker returned empty content, mark as limited
+        if (!gotRealContent) {
+          crawlData = null // fall through to basic fetch
+          console.log("Crawl worker returned thin content, falling back to fetch")
+        }
       }
     } catch (e) {
       console.error("Crawl worker failed, falling back to fetch:", e)
@@ -160,9 +169,11 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
         }
       }
 
-      // Check viewport for basic fetch path
-      const hasViewport = /<meta[^>]*name=["']viewport["']/i.test(html)
-      if (!hasViewport) { isMobileFriendly = false; flags.push("No mobile viewport tag") }
+      // Check viewport for basic fetch path — only if we got substantial HTML
+      if (html.length > 5000) {
+        const hasViewport = /<meta[^>]*name=["']viewport["']/i.test(html)
+        if (!hasViewport) { isMobileFriendly = false; flags.push("No mobile viewport tag detected") }
+      }
     } catch (err: any) {
       flags.push(err.name === "AbortError" ? "Site took too long to respond" : "Could not reach site")
       return { isYellowPages: false, isMobileFriendly: false, hasSSL, technologies, flags, summary: "Could not reach this website to analyze it.", emails: [] }
@@ -401,6 +412,7 @@ async function assessWithGemini(
   if (!apiKey) return undefined
 
   const trimmedHtml = html.slice(0, 12000)
+  const hasLimitedData = !context.crawlData || trimmedHtml.length < 500
 
   // Build richer context from crawl data
   const crawlContext = context.crawlData ? `
@@ -416,7 +428,8 @@ async function assessWithGemini(
 - Has OG tags: ${context.crawlData.metaChecks?.hasOgTitle || false}
 - Has Twitter card: ${context.crawlData.metaChecks?.hasTwitterCard || false}
 - Response time: ${context.crawlData.technical?.responseTimeMs || "Unknown"}ms
-- Social links: ${context.crawlData.structuralData?.links?.socialLinksCount || 0}` : ""
+- Social links: ${context.crawlData.structuralData?.links?.socialLinksCount || 0}` : `
+NOTE: The full page content could not be retrieved (bot protection, JavaScript-heavy site, or crawl failure). The HTML below may be incomplete or a shell. DO NOT make harsh judgments based on missing data — only assess what you can actually see. If the data is too thin to evaluate, say so honestly and give a moderate score (5-6) rather than a low one.`
 
   try {
     const response = await fetch(
@@ -429,6 +442,8 @@ async function assessWithGemini(
             parts: [{
               text: `You are a senior web design and digital marketing consultant evaluating a local business website. Give a thorough, actionable assessment that a web agency could use to pitch their services.
 
+IMPORTANT: Only make claims you can support from the actual content provided. If the HTML content is thin, empty, or appears to be a bot-protection page, acknowledge that the analysis is limited. Do NOT claim a site is "not mobile-friendly" or "missing content" if you simply couldn't access the full page. Many modern sites render via JavaScript and may appear empty in raw HTML.
+
 Here is the website content (trimmed):
 ${trimmedHtml}
 
@@ -437,7 +452,8 @@ Technical context:
 - Estimated age: ${context.estimatedAge || "Unknown"}
 - Has SSL: ${context.hasSSL}
 - Mobile friendly: ${context.isMobileFriendly}
-- Technical issues: ${context.flags.join(", ") || "None"}${crawlContext}
+- Technical issues: ${context.flags.join(", ") || "None"}
+- Data quality: ${hasLimitedData ? "LIMITED — crawl may have failed, be conservative in scoring" : "Good — full page content available"}${crawlContext}
 
 Return ONLY a valid JSON object (no markdown, no backticks):
 {

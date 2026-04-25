@@ -374,8 +374,9 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
               <div className="flex flex-wrap gap-1.5">
                 {analysis.platform && <Badge variant="secondary" className="text-xs">{analysis.platform}</Badge>}
                 {!analysis.hasSSL && <Badge variant="destructive" className="text-xs">No SSL</Badge>}
-                {!analysis.isMobileFriendly && <Badge variant="destructive" className="text-xs">Not Mobile</Badge>}
-                {(analysis as any).wordCount != null && <Badge variant="outline" className="text-xs">{(analysis as any).wordCount} words</Badge>}
+                {!analysis.isMobileFriendly && (analysis as any).wordCount > 0 && <Badge variant="destructive" className="text-xs">Not Mobile</Badge>}
+                {(analysis as any).wordCount != null && (analysis as any).wordCount > 0 && <Badge variant="outline" className="text-xs">{(analysis as any).wordCount} words</Badge>}
+                {!(analysis as any).wordCount && !(analysis as any).title && <Badge variant="outline" className="text-xs">Limited Data</Badge>}
                 {(analysis as any).aiAssessment?.needsRefresh && <Badge variant="destructive" className="text-xs">Needs Refresh</Badge>}
               </div>
             )}
@@ -387,7 +388,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
                   {(analysis as any).isYellowPages && <Badge variant="destructive" className="text-xs gap-1"><AlertTriangle className="w-3 h-3" />Yellow Pages Site</Badge>}
                   {analysis.estimatedAge && <Badge variant="outline" className="text-xs gap-1"><Clock className="w-3 h-3" />{analysis.estimatedAge}</Badge>}
                   {!analysis.hasSSL && <Badge variant="destructive" className="text-xs gap-1"><ShieldAlert className="w-3 h-3" />No SSL</Badge>}
-                  {!analysis.isMobileFriendly && <Badge variant="destructive" className="text-xs gap-1"><Smartphone className="w-3 h-3" />Not Mobile Friendly</Badge>}
+                  {!analysis.isMobileFriendly && (analysis as any).wordCount > 0 && <Badge variant="destructive" className="text-xs gap-1"><Smartphone className="w-3 h-3" />Not Mobile Friendly</Badge>}
                   {analysis.flags?.filter((f) => !f.includes("mobile") && !f.includes("SSL") && !f.includes("reach")).map((flag) => <Badge key={flag} variant="outline" className="text-xs">{flag}</Badge>)}
                 </div>
 
