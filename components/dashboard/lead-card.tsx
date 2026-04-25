@@ -154,6 +154,13 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
   useEffect(() => {
     if (business.emails && business.emails.length > emails.length) setEmails(business.emails)
   }, [business.emails])
+  // Sync status from parent (for bulk status changes)
+  useEffect(() => {
+    const newStatus = business.status || "neutral"
+    setStatus(newStatus)
+    // Un-hide if status changed away from dismissed
+    if (newStatus !== "dismissed" && hidden) setHidden(false)
+  }, [business.status])
   const [duellyCooldown, setDuellyCooldown] = useState(0)
   const [gbpAudit, setGbpAudit] = useState<GBPAudit | null>(business.gbpAudit || null)
   const [scanningGBP, setScanningGBP] = useState(false)

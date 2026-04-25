@@ -210,7 +210,10 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
     if (selectedIds.size === 0) return
     setBulkUpdating(true)
     const ids = Array.from(selectedIds)
+    // Update DB
     await Promise.allSettled(ids.map((id) => updateBusinessStatus(id, newStatus)))
+    // Update local state so cards reflect immediately
+    ids.forEach((id) => onBusinessUpdate?.(id, { status: newStatus }))
     setBulkUpdating(false)
     setSelectedIds(new Set())
     onProspectChange?.()
