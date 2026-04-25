@@ -207,8 +207,8 @@ export default function Dashboard() {
 
       <main className="flex-1 flex flex-col">
         {/* Search Section */}
-        <div className="border-b border-border bg-card p-6">
-          <div className="max-w-4xl mx-auto space-y-4">
+        <div className="border-b border-border bg-card p-4 sm:p-6">
+          <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-1">
                 Audit Local Businesses
@@ -244,27 +244,29 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
 
-              <Select value={radius} onValueChange={setRadius}>
-                <SelectTrigger className="sm:w-28">
-                  <SelectValue placeholder="Radius" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="15">15</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={radius} onValueChange={setRadius}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue placeholder="Radius" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="15">15</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Select value={unit} onValueChange={(v) => setUnit(v as "km" | "mi")}>
-                <SelectTrigger className="sm:w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="km">km</SelectItem>
-                  <SelectItem value="mi">mi</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select value={unit} onValueChange={(v) => setUnit(v as "km" | "mi")}>
+                  <SelectTrigger className="w-16">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="km">km</SelectItem>
+                    <SelectItem value="mi">mi</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               <Button
                 onClick={handleSearch}
@@ -334,7 +336,7 @@ export default function Dashboard() {
               {saveInfo && (
                 <p className="text-xs text-muted-foreground">{saveInfo}</p>
               )}
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge
                   variant={filter === "all" ? "default" : "outline"}
                   className="cursor-pointer"

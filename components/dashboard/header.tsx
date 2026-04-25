@@ -61,10 +61,10 @@ export function DashboardHeader() {
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {credits !== null && (
-            <div className="flex items-center gap-1 text-sm font-medium px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-              <Zap className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1 text-xs sm:text-sm font-medium px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+              <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               {credits}
             </div>
           )}
@@ -106,6 +106,12 @@ export function DashboardHeader() {
             <div className="mb-4">
               <ProjectPicker />
             </div>
+            {credits !== null && (
+              <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-sm font-medium text-amber-700 dark:text-amber-400">{credits} credits</span>
+              </div>
+            )}
             {NAV_LINKS.map((link) => (
               <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}>
                 <Button variant="ghost" className="w-full justify-start gap-3">

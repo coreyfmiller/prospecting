@@ -279,23 +279,23 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
     <div className="space-y-4">
       {/* Controls */}
       {showScanAll && (
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline" size="sm"
-            onClick={handleScanAllClick}
-            disabled={scanningAll || withWebsites.length === 0}
-            style={!scanningAll ? { borderColor: "#00A6BF", color: "#00A6BF" } : {}}
-            className="gap-1.5"
-          >
-            {scanningAll && scanTarget === "all" ? (
-              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Auditing {scanProgress.done}/{scanProgress.total}</>
-            ) : (
-              <><TrendingUp className="w-3.5 h-3.5" /> Audit All</>
-            )}
-          </Button>
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline" size="sm"
+              onClick={handleScanAllClick}
+              disabled={scanningAll || withWebsites.length === 0}
+              style={!scanningAll ? { borderColor: "#00A6BF", color: "#00A6BF" } : {}}
+              className="gap-1.5"
+            >
+              {scanningAll && scanTarget === "all" ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Auditing {scanProgress.done}/{scanProgress.total}</>
+              ) : (
+                <><TrendingUp className="w-3.5 h-3.5" /> Audit All</>
+              )}
+            </Button>
 
-          {selectedIds.size > 0 && (
-            <>
+            {selectedIds.size > 0 && (
               <Button
                 variant="outline" size="sm"
                 onClick={handleScanSelectedClick}
@@ -309,7 +309,9 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
                   <><TrendingUp className="w-3.5 h-3.5" /> Audit Selected ({selectedIds.size})</>
                 )}
               </Button>
+            )}
 
+            {selectedIds.size > 0 && (
               <Button
                 variant="outline" size="sm"
                 onClick={handleBulkFindEmails}
@@ -322,43 +324,47 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
                   <><Mail className="w-3.5 h-3.5" /> Find Emails ({selectedIds.size})</>
                 )}
               </Button>
+            )}
 
-              <div className="flex items-center gap-1 border-l border-border pl-3">
-                <Button variant="outline" size="sm" onClick={() => handleBulkStatus("prospect")} disabled={bulkUpdating} className="gap-1 text-xs h-7 px-2">
-                  <Star className="w-3 h-3" /> Prospect
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkStatus("priority")} disabled={bulkUpdating} className="gap-1 text-xs h-7 px-2">
-                  <Flame className="w-3 h-3" /> Priority
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkStatus("dismissed")} disabled={bulkUpdating} className="gap-1 text-xs h-7 px-2 text-destructive hover:text-destructive">
-                  <Ban className="w-3 h-3" /> Dismiss
-                </Button>
-              </div>
-            </>
-          )}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[150px] sm:w-[180px] h-8 text-xs">
+                <ArrowUpDown className="w-3 h-3 mr-1" />
+                <SelectValue placeholder="Sort results" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Web Presence</SelectItem>
+                <SelectItem value="seo-worst">SEO: Worst First</SelectItem>
+                <SelectItem value="seo-best">SEO: Best First</SelectItem>
+                <SelectItem value="geo-worst">AI Visibility: Worst</SelectItem>
+                <SelectItem value="geo-best">AI Visibility: Best</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[180px] h-8 text-xs">
-              <ArrowUpDown className="w-3 h-3 mr-1" />
-              <SelectValue placeholder="Sort results" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Web Presence</SelectItem>
-              <SelectItem value="seo-worst">SEO: Worst First</SelectItem>
-              <SelectItem value="seo-best">SEO: Best First</SelectItem>
-              <SelectItem value="geo-worst">AI Visibility: Worst First</SelectItem>
-              <SelectItem value="geo-best">AI Visibility: Best First</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="flex items-center border border-border rounded-md ml-auto">
-            <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded-l-md transition-colors ${viewMode === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`} title="Card view">
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button onClick={() => setViewMode("table")} className={`p-1.5 rounded-r-md transition-colors ${viewMode === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`} title="Table view">
-              <TableProperties className="w-4 h-4" />
-            </button>
+            <div className="flex items-center border border-border rounded-md ml-auto">
+              <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded-l-md transition-colors ${viewMode === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`} title="Card view">
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button onClick={() => setViewMode("table")} className={`p-1.5 rounded-r-md transition-colors ${viewMode === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`} title="Table view">
+                <TableProperties className="w-4 h-4" />
+              </button>
+            </div>
           </div>
+
+          {/* Bulk status actions — separate row on mobile */}
+          {selectedIds.size > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-muted-foreground mr-1">{selectedIds.size} selected:</span>
+              <Button variant="outline" size="sm" onClick={() => handleBulkStatus("prospect")} disabled={bulkUpdating} className="gap-1 text-xs h-7 px-2">
+                <Star className="w-3 h-3" /> Prospect
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleBulkStatus("priority")} disabled={bulkUpdating} className="gap-1 text-xs h-7 px-2">
+                <Flame className="w-3 h-3" /> Priority
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleBulkStatus("dismissed")} disabled={bulkUpdating} className="gap-1 text-xs h-7 px-2 text-destructive hover:text-destructive">
+                <Ban className="w-3 h-3" /> Dismiss
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
