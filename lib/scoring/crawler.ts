@@ -6,11 +6,10 @@
 import * as cheerio from 'cheerio';
 import { detectPlatform } from './platform-detector';
 import type { CrawlResult } from './types';
+import { fetchWithBrightData, isBrightDataConfigured } from './brightdata';
 
 const CRAWL_WORKER_URL = process.env.CRAWL_WORKER_URL || '';
 const CRAWL_WORKER_SECRET = process.env.CRAWL_WORKER_SECRET || '';
-const BRIGHTDATA_API_KEY = process.env.BRIGHTDATA_API_KEY || '';
-const BRIGHTDATA_ZONE = process.env.BRIGHTDATA_ZONE || '';
 
 export async function crawlPage(url: string): Promise<CrawlResult> {
   if (!url.startsWith('http')) url = `https://${url}`;
@@ -21,7 +20,7 @@ export async function crawlPage(url: string): Promise<CrawlResult> {
   }
 
   // 2. Use Bright Data Unlocker API when configured
-  if (BRIGHTDATA_API_KEY && BRIGHTDATA_ZONE && BRIGHTDATA_API_KEY !== 'your_brightdata_api_key_here') {
+  if (isBrightDataConfigured()) {
     return crawlViaBrightData(url);
   }
 
@@ -226,27 +225,7 @@ async function crawlViaBrightData(url: string): Promise<CrawlResult> {
   console.log(`[Crawler] Bright Data scan: ${url}`);
 
   try {
-    const res = await fetch('https://api.brightdata.com/request', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${BRIGHTDATA_API_KEY}`,
-      },
-      body: JSON.stringify({
-        zone: BRIGHTDATA_ZONE,
-        url: url,
-        format: 'raw',
-      }),
-      signal: AbortSignal.timeout(60_000), // Bright Data can take a moment for hard sites
-    });
-
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      console.error(`[Crawler] Bright Data failed (${res.status}):`, body.error);
-      throw new Error(body.error || 'Bright Data crawl failed');
-    }
-
-    const html = await res.text();
+    const html = await fetchWithBrightData(url);
     const responseTimeMs = Date.now() - start;
     
     console.log(`[Crawler] Bright Data success: ${url} (${responseTimeMs}ms)`);
@@ -255,8 +234,6 @@ async function crawlViaBrightData(url: string): Promise<CrawlResult> {
     return parseHtml(html, url, responseTimeMs);
   } catch (err: any) {
     console.error(`[Crawler] Bright Data error for ${url}:`, err.message);
-    // If Bright Data fails, we can either throw or fallback. 
-    // Throwing is safer for credit management (don't partial-scan if user paid for full)
     throw err;
   }
 }

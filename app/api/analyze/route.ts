@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { fetchWithBrightData, isBrightDataConfigured } from "@/lib/scoring/brightdata"
 
 export interface SiteAnalysis {
   estimatedAge?: string
@@ -144,27 +145,65 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
 
       const isBotProtected = html.includes("Just a moment") || html.includes("challenge-platform") || (html.includes("Cloudflare") && html.length < 10000)
       if (isBotProtected) {
-        try {
-          const cacheRes = await fetch(`https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`, {
-            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
-            signal: AbortSignal.timeout(8000),
-          })
-          if (cacheRes.ok) {
-            const cacheHtml = await cacheRes.text()
-            if (!cacheHtml.includes("Just a moment") && cacheHtml.length > 5000) {
-              html = cacheHtml
-              flags.push("Analyzed from Google cache (site has bot protection)")
+        console.log(`[Analyze] Bot protection detected for ${url}. Attempting bypass...`);
+        
+        // 1. Try Bright Data first (Premium solution)
+        if (isBrightDataConfigured()) {
+          try {
+            const bypassHtml = await fetchWithBrightData(url);
+            if (bypassHtml && bypassHtml.length > 1000) {
+              html = bypassHtml;
+              flags.push("Analyzed via Bright Data (bypass successful)");
+              console.log(`[Analyze] Bright Data bypass successful for ${url}`);
+              // If we got clean HTML, we don't need Google Cache
             }
+          } catch (e: any) {
+            console.error(`[Analyze] Bright Data bypass failed:`, e.message);
           }
-        } catch {}
+        }
+
+        // 2. Fallback to Google Cache only if Bright Data failed or isn't configured
         if (html.includes("Just a moment") || html.includes("challenge-platform")) {
-          return { isYellowPages: false, hasSSL, technologies, flags: ["Bot protection detected"], summary: "This site has bot protection that prevents automated analysis.", emails: [] }
+          try {
+            const cacheRes = await fetch(`https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`, {
+              headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+              signal: AbortSignal.timeout(8000),
+            })
+            if (cacheRes.ok) {
+              const cacheHtml = await cacheRes.text()
+              if (!cacheHtml.includes("Just a moment") && cacheHtml.length > 5000) {
+                html = cacheHtml
+                flags.push("Analyzed from Google cache (site has bot protection)")
+              }
+            }
+          } catch {}
+        }
+        
+        // 3. Final check — if still blocked, return failure
+        if (html.includes("Just a moment") || html.includes("challenge-platform")) {
+          return { 
+            isYellowPages: false, 
+            hasSSL, 
+            technologies, 
+            flags: ["Bot protection detected"], 
+            summary: "This site has bot protection that prevents automated analysis.", 
+            emails: [],
+            isMobileFriendly: true
+          }
         }
       }
 
     } catch (err: any) {
       flags.push(err.name === "AbortError" ? "Site took too long to respond" : "Could not reach site")
-      return { isYellowPages: false, hasSSL, technologies, flags, summary: "Could not reach this website to analyze it.", emails: [] }
+      return { 
+        isYellowPages: false, 
+        hasSSL, 
+        technologies, 
+        flags, 
+        summary: "Could not reach this website to analyze it.", 
+        emails: [],
+        isMobileFriendly: true
+      }
     }
   }
 
