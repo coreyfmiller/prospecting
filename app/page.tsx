@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { DashboardHeader } from "@/components/dashboard/header"
 import { BusinessGrid } from "@/components/dashboard/business-grid"
 import type { CardBusiness } from "@/components/dashboard/lead-card"
+import { CategoryPicker } from "@/components/dashboard/category-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -29,31 +30,6 @@ import type { Business } from "@/app/api/search/route"
 import { saveBusinesses as dbSaveBusinesses, ensureProject, getBusinesses, saveAudit as dbSaveAudit, getActiveProjectId } from "@/lib/db"
 import { isBlocked, isBlockChainsEnabled, setBlockChainsEnabled } from "@/lib/blocklist"
 import { useCustomTags } from "@/hooks/use-custom-tags"
-
-const CATEGORIES = [
-  "Restaurants & Cafes",
-  "Hair & Beauty Salons",
-  "Contractors & Trades",
-  "Plumbers",
-  "Electricians",
-  "HVAC",
-  "Roofing",
-  "Real Estate Agents",
-  "Auto Services",
-  "Healthcare & Medical",
-  "Dentists",
-  "Chiropractors",
-  "Retail Stores",
-  "Home Services",
-  "Landscaping",
-  "Fitness & Gyms",
-  "Pet Services",
-  "Photography",
-  "Accounting & Tax",
-  "Law Firms",
-  "Insurance Agents",
-  "Cleaning Services",
-]
 
 type FilterType = "all" | "website" | "facebook-only" | "no-presence"
 
@@ -230,19 +206,7 @@ export default function Dashboard() {
                 />
               </div>
 
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="sm:w-64">
-                  <Building2 className="w-4 h-4 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CategoryPicker value={category} onChange={setCategory} className="sm:w-64" />
 
               <div className="flex gap-2">
                 <Select value={radius} onValueChange={setRadius}>
