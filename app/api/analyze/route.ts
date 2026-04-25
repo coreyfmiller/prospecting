@@ -11,11 +11,32 @@ export interface SiteAnalysis {
   flags: string[]
   summary: string
   emails: string[]
+  // Rich fields from crawl worker
+  title?: string
+  description?: string
+  wordCount?: number
+  internalLinks?: number
+  externalLinks?: number
+  totalImages?: number
+  imagesWithAlt?: number
+  h1Count?: number
+  h2Count?: number
+  hasCanonical?: boolean
+  hasOgTags?: boolean
+  hasTwitterCard?: boolean
+  responseTimeMs?: number
+  socialLinksCount?: number
   aiAssessment?: {
     needsRefresh: boolean
     score: number
     reasons: string[]
     recommendation: string
+    designQuality: string
+    contentQuality: string
+    seoReadiness: string
+    conversionPotential: string
+    topStrengths: string[]
+    topWeaknesses: string[]
   }
 }
 
@@ -78,83 +99,73 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
 
   let html = ""
   let headers: Headers | null = null
+  let crawlData: any = null
 
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
+  // Try Playwright crawl worker first for rich data
+  const crawlWorkerUrl = process.env.CRAWL_WORKER_URL
+  const crawlWorkerSecret = process.env.CRAWL_WORKER_SECRET
+  if (crawlWorkerUrl && crawlWorkerSecret) {
+    try {
+      const crawlRes = await fetch(`${crawlWorkerUrl}/crawl`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${crawlWorkerSecret}` },
+        body: JSON.stringify({ url, lightweight: true }),
+        signal: AbortSignal.timeout(25000),
+      })
+      if (crawlRes.ok) {
+        crawlData = await crawlRes.json()
+        html = crawlData.thinnedText || ""
+        hasSSL = crawlData.technical?.isHttps ?? hasSSL
+        isMobileFriendly = crawlData.metaChecks?.hasViewport ?? true
+        if (!crawlData.metaChecks?.hasViewport) flags.push("No mobile viewport tag")
+      }
+    } catch (e) {
+      console.error("Crawl worker failed, falling back to fetch:", e)
+    }
+  }
 
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      },
-      redirect: "follow",
-    })
+  // Fallback to basic fetch if crawl worker didn't work
+  if (!crawlData) {
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 10000)
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+        redirect: "follow",
+      })
+      clearTimeout(timeout)
+      headers = response.headers
+      html = await response.text()
+      if (response.url.startsWith("https")) hasSSL = true
+      else if (response.url.startsWith("http:")) hasSSL = false
 
-    clearTimeout(timeout)
-    headers = response.headers
-    html = await response.text()
-
-    // Check final URL for SSL
-    if (response.url.startsWith("https")) hasSSL = true
-    else if (response.url.startsWith("http:")) hasSSL = false
-
-    // Detect Cloudflare/bot protection
-    const isBotProtected =
-      html.includes("Just a moment") ||
-      html.includes("Attention Required") ||
-      html.includes("cf-browser-verification") ||
-      html.includes("challenge-platform") ||
-      (html.includes("Cloudflare") && html.length < 10000)
-
-    if (isBotProtected) {
-      // Try Google's cached version
-      try {
-        const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`
-        const cacheRes = await fetch(cacheUrl, {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          },
-          signal: AbortSignal.timeout(8000),
-        })
-        if (cacheRes.ok) {
-          const cacheHtml = await cacheRes.text()
-          if (!cacheHtml.includes("Just a moment") && cacheHtml.length > 5000) {
-            html = cacheHtml
-            flags.push("Analyzed from Google cache (site has bot protection)")
+      const isBotProtected = html.includes("Just a moment") || html.includes("challenge-platform") || (html.includes("Cloudflare") && html.length < 10000)
+      if (isBotProtected) {
+        try {
+          const cacheRes = await fetch(`https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`, {
+            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+            signal: AbortSignal.timeout(8000),
+          })
+          if (cacheRes.ok) {
+            const cacheHtml = await cacheRes.text()
+            if (!cacheHtml.includes("Just a moment") && cacheHtml.length > 5000) {
+              html = cacheHtml
+              flags.push("Analyzed from Google cache (site has bot protection)")
+            }
           }
-        }
-      } catch {}
-
-      // If cache didn't work, return error
-      if (html.includes("Just a moment") || html.includes("challenge-platform")) {
-        return {
-          isYellowPages: false,
-          isMobileFriendly: false,
-          hasSSL,
-          technologies,
-          flags: ["Bot protection detected"],
-          summary: "This site has Cloudflare or similar bot protection that prevents automated analysis. The site blocks crawlers from viewing its content.",
-          emails: [],
+        } catch {}
+        if (html.includes("Just a moment") || html.includes("challenge-platform")) {
+          return { isYellowPages: false, isMobileFriendly: false, hasSSL, technologies, flags: ["Bot protection detected"], summary: "This site has bot protection that prevents automated analysis.", emails: [] }
         }
       }
-    }
-  } catch (err: any) {
-    if (err.name === "AbortError") {
-      flags.push("Site took too long to respond")
-    } else {
-      flags.push("Could not reach site")
-    }
-    return {
-      isYellowPages: false,
-      isMobileFriendly: false,
-      hasSSL,
-      technologies,
-      flags,
-      summary: "Could not reach this website to analyze it.",
-      emails: [],
+
+      // Check viewport for basic fetch path
+      const hasViewport = /<meta[^>]*name=["']viewport["']/i.test(html)
+      if (!hasViewport) { isMobileFriendly = false; flags.push("No mobile viewport tag") }
+    } catch (err: any) {
+      flags.push(err.name === "AbortError" ? "Site took too long to respond" : "Could not reach site")
+      return { isYellowPages: false, isMobileFriendly: false, hasSSL, technologies, flags, summary: "Could not reach this website to analyze it.", emails: [] }
     }
   }
 
@@ -261,7 +272,7 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
 
   // AI Assessment via Gemini
   const aiAssessment = await assessWithGemini(html, {
-    platform, estimatedAge, hasSSL, isMobileFriendly, flags,
+    platform, estimatedAge, hasSSL, isMobileFriendly, flags, crawlData,
   })
 
   // Build summary
@@ -279,7 +290,7 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
   return {
     estimatedAge,
     copyrightYear,
-    platform,
+    platform: crawlData?.platformDetection?.platform || platform,
     isYellowPages,
     isMobileFriendly,
     hasSSL,
@@ -287,6 +298,20 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
     flags,
     summary,
     emails,
+    title: crawlData?.title,
+    description: crawlData?.description,
+    wordCount: crawlData?.structuralData?.wordCount,
+    internalLinks: crawlData?.structuralData?.links?.internal,
+    externalLinks: crawlData?.structuralData?.links?.external,
+    totalImages: crawlData?.structuralData?.media?.totalImages,
+    imagesWithAlt: crawlData?.structuralData?.media?.imagesWithAlt,
+    h1Count: crawlData?.structuralData?.semanticTags?.h1Count,
+    h2Count: crawlData?.structuralData?.semanticTags?.h2Count,
+    hasCanonical: crawlData?.metaChecks?.hasCanonical,
+    hasOgTags: crawlData?.metaChecks?.hasOgTitle && crawlData?.metaChecks?.hasOgDescription,
+    hasTwitterCard: crawlData?.metaChecks?.hasTwitterCard,
+    responseTimeMs: crawlData?.technical?.responseTimeMs,
+    socialLinksCount: crawlData?.structuralData?.links?.socialLinksCount,
     aiAssessment,
   }
 }
@@ -370,13 +395,28 @@ function buildSummary(data: {
 
 async function assessWithGemini(
   html: string,
-  context: { platform?: string; estimatedAge?: string; hasSSL: boolean; isMobileFriendly: boolean; flags: string[] }
-): Promise<{ needsRefresh: boolean; score: number; reasons: string[]; recommendation: string } | undefined> {
+  context: { platform?: string; estimatedAge?: string; hasSSL: boolean; isMobileFriendly: boolean; flags: string[]; crawlData?: any }
+): Promise<SiteAnalysis["aiAssessment"]> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) return undefined
 
-  // Trim HTML to avoid token limits — keep first 8000 chars
-  const trimmedHtml = html.slice(0, 8000)
+  const trimmedHtml = html.slice(0, 12000)
+
+  // Build richer context from crawl data
+  const crawlContext = context.crawlData ? `
+- Page title: ${context.crawlData.title || "None"}
+- Meta description: ${context.crawlData.description || "None"}
+- Word count: ${context.crawlData.structuralData?.wordCount || "Unknown"}
+- H1 tags: ${context.crawlData.structuralData?.semanticTags?.h1Count || 0}
+- H2 tags: ${context.crawlData.structuralData?.semanticTags?.h2Count || 0}
+- Internal links: ${context.crawlData.structuralData?.links?.internal || 0}
+- External links: ${context.crawlData.structuralData?.links?.external || 0}
+- Images: ${context.crawlData.structuralData?.media?.totalImages || 0} (${context.crawlData.structuralData?.media?.imagesWithAlt || 0} with alt text)
+- Has canonical: ${context.crawlData.metaChecks?.hasCanonical || false}
+- Has OG tags: ${context.crawlData.metaChecks?.hasOgTitle || false}
+- Has Twitter card: ${context.crawlData.metaChecks?.hasTwitterCard || false}
+- Response time: ${context.crawlData.technical?.responseTimeMs || "Unknown"}ms
+- Social links: ${context.crawlData.structuralData?.links?.socialLinksCount || 0}` : ""
 
   try {
     const response = await fetch(
@@ -387,30 +427,36 @@ async function assessWithGemini(
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are a web design expert evaluating whether a business website needs a redesign or refresh.
+              text: `You are a senior web design and digital marketing consultant evaluating a local business website. Give a thorough, actionable assessment that a web agency could use to pitch their services.
 
-Here is the HTML of the website (trimmed):
+Here is the website content (trimmed):
 ${trimmedHtml}
 
-Additional context:
+Technical context:
 - Platform: ${context.platform || "Unknown"}
 - Estimated age: ${context.estimatedAge || "Unknown"}
 - Has SSL: ${context.hasSSL}
 - Mobile friendly: ${context.isMobileFriendly}
-- Technical issues: ${context.flags.join(", ") || "None"}
+- Technical issues: ${context.flags.join(", ") || "None"}${crawlContext}
 
-Evaluate this website and return ONLY a valid JSON object (no markdown, no backticks):
+Return ONLY a valid JSON object (no markdown, no backticks):
 {
   "needsRefresh": true/false,
-  "score": 1-10 (1=desperately needs refresh, 10=modern and well-built),
-  "reasons": ["reason 1", "reason 2", "reason 3"],
-  "recommendation": "One sentence pitch-ready recommendation for the business owner"
+  "score": 1-10 (1=desperately needs work, 10=excellent),
+  "reasons": ["specific reason 1", "specific reason 2", "specific reason 3", "specific reason 4", "specific reason 5"],
+  "recommendation": "One compelling sentence a salesperson could use when pitching to this business owner",
+  "designQuality": "One sentence about the visual design quality and first impression",
+  "contentQuality": "One sentence about the content — is it thin, outdated, well-written, missing key info?",
+  "seoReadiness": "One sentence about how SEO-ready the site is — meta tags, headings, content structure",
+  "conversionPotential": "One sentence about calls-to-action, contact forms, phone numbers — can visitors convert?",
+  "topStrengths": ["strength 1", "strength 2"],
+  "topWeaknesses": ["weakness 1", "weakness 2", "weakness 3"]
 }`,
             }],
           }],
           generationConfig: {
             temperature: 0.3,
-            maxOutputTokens: 1000,
+            maxOutputTokens: 1500,
             thinkingConfig: { thinkingBudget: 0 },
           },
         }),
@@ -422,7 +468,6 @@ Evaluate this website and return ONLY a valid JSON object (no markdown, no backt
 
     const data = await response.json()
     const parts = data.candidates?.[0]?.content?.parts || []
-    // Gemini 2.5 may return multiple parts (thinking + response) — get the last text part
     const text = parts.filter((p: any) => p.text).map((p: any) => p.text).join("\n")
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return undefined
@@ -431,8 +476,14 @@ Evaluate this website and return ONLY a valid JSON object (no markdown, no backt
     return {
       needsRefresh: !!parsed.needsRefresh,
       score: Math.min(10, Math.max(1, parseInt(parsed.score) || 5)),
-      reasons: Array.isArray(parsed.reasons) ? parsed.reasons.slice(0, 5) : [],
+      reasons: Array.isArray(parsed.reasons) ? parsed.reasons.slice(0, 7) : [],
       recommendation: parsed.recommendation || "",
+      designQuality: parsed.designQuality || "",
+      contentQuality: parsed.contentQuality || "",
+      seoReadiness: parsed.seoReadiness || "",
+      conversionPotential: parsed.conversionPotential || "",
+      topStrengths: Array.isArray(parsed.topStrengths) ? parsed.topStrengths.slice(0, 3) : [],
+      topWeaknesses: Array.isArray(parsed.topWeaknesses) ? parsed.topWeaknesses.slice(0, 5) : [],
     }
   } catch (e) {
     console.error("Gemini assessment error:", e)

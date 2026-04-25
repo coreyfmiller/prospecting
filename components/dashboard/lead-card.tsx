@@ -360,15 +360,23 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
           <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border/50">
             <button onClick={() => setShowAnalysis(!showAnalysis)} className="w-full flex items-center justify-between">
               <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><ScanSearch className="w-3.5 h-3.5 text-primary" /> Site Analysis</p>
-              <span className="text-xs text-muted-foreground">{showAnalysis ? "▲" : "▼"}</span>
+              <div className="flex items-center gap-2">
+                {(analysis as any).aiAssessment && (
+                  <span className={`text-xs font-bold ${(analysis as any).aiAssessment.score <= 3 ? "text-red-500" : (analysis as any).aiAssessment.score <= 6 ? "text-amber-500" : "text-green-500"}`}>
+                    {(analysis as any).aiAssessment.score}/10
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground">{showAnalysis ? "▲" : "▼"}</span>
+              </div>
             </button>
-            {/* Collapsed: show key badges only */}
+            {/* Collapsed: show key badges */}
             {!showAnalysis && (
               <div className="flex flex-wrap gap-1.5">
                 {analysis.platform && <Badge variant="secondary" className="text-xs">{analysis.platform}</Badge>}
                 {!analysis.hasSSL && <Badge variant="destructive" className="text-xs">No SSL</Badge>}
                 {!analysis.isMobileFriendly && <Badge variant="destructive" className="text-xs">Not Mobile</Badge>}
-                {(analysis as any).aiAssessment && <Badge variant={((analysis as any).aiAssessment.score <= 3) ? "destructive" : "outline"} className="text-xs">{(analysis as any).aiAssessment.score}/10</Badge>}
+                {(analysis as any).wordCount != null && <Badge variant="outline" className="text-xs">{(analysis as any).wordCount} words</Badge>}
+                {(analysis as any).aiAssessment?.needsRefresh && <Badge variant="destructive" className="text-xs">Needs Refresh</Badge>}
               </div>
             )}
             {/* Expanded: full details */}
@@ -382,15 +390,56 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
                   {!analysis.isMobileFriendly && <Badge variant="destructive" className="text-xs gap-1"><Smartphone className="w-3 h-3" />Not Mobile Friendly</Badge>}
                   {analysis.flags?.filter((f) => !f.includes("mobile") && !f.includes("SSL") && !f.includes("reach")).map((flag) => <Badge key={flag} variant="outline" className="text-xs">{flag}</Badge>)}
                 </div>
+
+                {/* Site stats */}
+                {((analysis as any).wordCount != null || (analysis as any).totalImages != null || (analysis as any).internalLinks != null) && (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground pt-1">
+                    {(analysis as any).wordCount != null && <span>Words: <span className="text-foreground font-medium">{(analysis as any).wordCount}</span></span>}
+                    {(analysis as any).h1Count != null && <span>H1 tags: <span className={`font-medium ${(analysis as any).h1Count === 1 ? "text-green-600" : (analysis as any).h1Count === 0 ? "text-red-500" : "text-amber-500"}`}>{(analysis as any).h1Count}</span></span>}
+                    {(analysis as any).totalImages != null && <span>Images: <span className="text-foreground font-medium">{(analysis as any).imagesWithAlt || 0}/{(analysis as any).totalImages} with alt</span></span>}
+                    {(analysis as any).internalLinks != null && <span>Links: <span className="text-foreground font-medium">{(analysis as any).internalLinks} int / {(analysis as any).externalLinks || 0} ext</span></span>}
+                    {(analysis as any).hasCanonical != null && <span>Canonical: <span className={`font-medium ${(analysis as any).hasCanonical ? "text-green-600" : "text-red-500"}`}>{(analysis as any).hasCanonical ? "Yes" : "No"}</span></span>}
+                    {(analysis as any).hasOgTags != null && <span>OG tags: <span className={`font-medium ${(analysis as any).hasOgTags ? "text-green-600" : "text-red-500"}`}>{(analysis as any).hasOgTags ? "Yes" : "No"}</span></span>}
+                    {(analysis as any).responseTimeMs != null && <span>Load time: <span className={`font-medium ${(analysis as any).responseTimeMs < 2000 ? "text-green-600" : (analysis as any).responseTimeMs < 4000 ? "text-amber-500" : "text-red-500"}`}>{((analysis as any).responseTimeMs / 1000).toFixed(1)}s</span></span>}
+                    {(analysis as any).socialLinksCount != null && <span>Social links: <span className="text-foreground font-medium">{(analysis as any).socialLinksCount}</span></span>}
+                  </div>
+                )}
+
                 <p className="text-xs text-muted-foreground leading-relaxed">{analysis.summary}</p>
+
                 {(analysis as any).aiAssessment && (
-                  <div className="pt-2 border-t border-border/30 space-y-1.5">
+                  <div className="pt-2 border-t border-border/30 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium">Refresh Score</span>
+                      <span className="text-xs font-medium">Site Quality Score</span>
                       <span className={`text-xs font-bold ${(analysis as any).aiAssessment.score <= 3 ? "text-red-500" : (analysis as any).aiAssessment.score <= 6 ? "text-amber-500" : "text-green-500"}`}>
                         {(analysis as any).aiAssessment.score}/10{(analysis as any).aiAssessment.needsRefresh && " — Needs Refresh"}
                       </span>
                     </div>
+
+                    {/* Detailed assessments */}
+                    {(analysis as any).aiAssessment.designQuality && (
+                      <div className="space-y-1 text-xs">
+                        {(analysis as any).aiAssessment.designQuality && <p><span className="font-medium text-foreground">Design:</span> <span className="text-muted-foreground">{(analysis as any).aiAssessment.designQuality}</span></p>}
+                        {(analysis as any).aiAssessment.contentQuality && <p><span className="font-medium text-foreground">Content:</span> <span className="text-muted-foreground">{(analysis as any).aiAssessment.contentQuality}</span></p>}
+                        {(analysis as any).aiAssessment.seoReadiness && <p><span className="font-medium text-foreground">SEO:</span> <span className="text-muted-foreground">{(analysis as any).aiAssessment.seoReadiness}</span></p>}
+                        {(analysis as any).aiAssessment.conversionPotential && <p><span className="font-medium text-foreground">Conversion:</span> <span className="text-muted-foreground">{(analysis as any).aiAssessment.conversionPotential}</span></p>}
+                      </div>
+                    )}
+
+                    {/* Strengths & Weaknesses */}
+                    {(analysis as any).aiAssessment.topStrengths?.length > 0 && (
+                      <div className="text-xs">
+                        <span className="font-medium text-green-600">Strengths: </span>
+                        <span className="text-muted-foreground">{(analysis as any).aiAssessment.topStrengths.join(" · ")}</span>
+                      </div>
+                    )}
+                    {(analysis as any).aiAssessment.topWeaknesses?.length > 0 && (
+                      <div className="text-xs">
+                        <span className="font-medium text-red-500">Weaknesses: </span>
+                        <span className="text-muted-foreground">{(analysis as any).aiAssessment.topWeaknesses.join(" · ")}</span>
+                      </div>
+                    )}
+
                     {(analysis as any).aiAssessment.reasons?.length > 0 && <ul className="text-xs text-muted-foreground space-y-0.5">{(analysis as any).aiAssessment.reasons.map((r: string, i: number) => <li key={i}>• {r}</li>)}</ul>}
                     {(analysis as any).aiAssessment.recommendation && <p className="text-xs text-primary font-medium italic">"{(analysis as any).aiAssessment.recommendation}"</p>}
                   </div>
