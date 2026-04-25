@@ -366,7 +366,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
                     {(analysis as any).aiAssessment.score}/10
                   </span>
                 )}
-                <span className="text-xs text-muted-foreground">{showAnalysis ? "▲" : "▼"}</span>
+                <span className="text-xs text-primary">{showAnalysis ? "Hide Details" : "View Details"}</span>
               </div>
             </button>
             {/* Collapsed: show key badges */}
@@ -503,7 +503,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
               <p className="text-xs font-medium text-foreground flex items-center gap-1.5"><MapPinned className="w-3.5 h-3.5 text-blue-500" /> Google Business Score</p>
               <div className="flex items-center gap-2">
                 <span className={`text-sm font-bold ${gbpAudit.completenessScore >= 70 ? "text-green-600" : gbpAudit.completenessScore >= 40 ? "text-amber-500" : "text-red-500"}`}>{gbpAudit.completenessScore}/100</span>
-                <span className="text-xs text-muted-foreground">{showGBP ? "▲" : "▼"}</span>
+                <span className="text-xs text-primary">{showGBP ? "Hide Details" : "View Details"}</span>
               </div>
             </button>
             {showGBP && (
