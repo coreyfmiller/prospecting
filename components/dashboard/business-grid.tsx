@@ -258,12 +258,13 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
 
   const sorted = useMemo(() => {
     const list = [...businesses]
+    const getPresence = (b: CardBusiness) => (b.webPresence || (b as any).web_presence || "none")
     const presenceOrder: Record<string, number> = { website: 0, "facebook-only": 1, "social-only": 2, none: 3 }
     if (sortBy === "seo-worst") list.sort((a, b) => (a.duellyScan?.seoScore ?? 999) - (b.duellyScan?.seoScore ?? 999))
     else if (sortBy === "seo-best") list.sort((a, b) => (b.duellyScan?.seoScore ?? -1) - (a.duellyScan?.seoScore ?? -1))
     else if (sortBy === "geo-worst") list.sort((a, b) => (a.duellyScan?.geoScore ?? 999) - (b.duellyScan?.geoScore ?? 999))
     else if (sortBy === "geo-best") list.sort((a, b) => (b.duellyScan?.geoScore ?? -1) - (a.duellyScan?.geoScore ?? -1))
-    else list.sort((a, b) => (presenceOrder[a.webPresence || "none"] ?? 3) - (presenceOrder[b.webPresence || "none"] ?? 3))
+    else list.sort((a, b) => (presenceOrder[getPresence(a)] ?? 3) - (presenceOrder[getPresence(b)] ?? 3))
     return list
   }, [businesses, sortBy])
 

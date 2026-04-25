@@ -160,11 +160,10 @@ export function BusinessTable({ businesses, selectedIds, onToggleSelect, onToggl
                     </DropdownMenu>
                   </TableCell>
                   <TableCell>
-                    <div className="max-w-[200px]">
+                    <div className="max-w-[250px]">
                       {b.duellyScan?.criticalIssues && b.duellyScan.criticalIssues.length > 0 ? (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {b.duellyScan.criticalIssues.slice(0, 2).join(", ")}
-                          {b.duellyScan.criticalIssues.length > 2 && ` +${b.duellyScan.criticalIssues.length - 2}`}
+                        <p className="text-xs text-muted-foreground">
+                          {b.duellyScan.criticalIssues.join(", ")}
                         </p>
                       ) : b.scanError ? (
                         <p className="text-xs text-destructive truncate">{b.scanError}</p>

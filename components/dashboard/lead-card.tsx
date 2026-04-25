@@ -173,6 +173,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
   const [generatingEmail, setGeneratingEmail] = useState(false)
   const [showDismissConfirm, setShowDismissConfirm] = useState(false)
   const [hidden, setHidden] = useState(false)
+  const [showAllIssues, setShowAllIssues] = useState(false)
 
   const isProspect = status === "prospect"
   const isPriority = status === "priority"
@@ -427,7 +428,18 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
               <ScoreGauge value={duellyScan.geoScore} label="AI Visibility" sublabel="(GEO)" />
               <ScoreGauge value={duellyScan.domainAuthority} label="DA" />
             </div>
-            {duellyScan.criticalIssues?.length > 0 && <div className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Issues: </span>{duellyScan.criticalIssues.slice(0, 3).join(", ")}{duellyScan.criticalIssues.length > 3 && ` +${duellyScan.criticalIssues.length - 3} more`}</div>}
+            {duellyScan.criticalIssues?.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Issues: </span>
+                {(showAllIssues ? duellyScan.criticalIssues : duellyScan.criticalIssues.slice(0, 3)).join(", ")}
+                {duellyScan.criticalIssues.length > 3 && !showAllIssues && (
+                  <button onClick={() => setShowAllIssues(true)} className="ml-1 text-primary hover:underline">+{duellyScan.criticalIssues.length - 3} more</button>
+                )}
+                {showAllIssues && duellyScan.criticalIssues.length > 3 && (
+                  <button onClick={() => setShowAllIssues(false)} className="ml-1 text-primary hover:underline">show less</button>
+                )}
+              </div>
+            )}
             <p className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground/50">Powered by <img src="/duelly.png" alt="Duelly" className="h-3 inline-block" /></p>
           </div>
         )}
