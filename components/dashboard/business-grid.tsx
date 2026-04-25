@@ -6,8 +6,8 @@ import { BusinessTable } from "./business-table"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, TrendingUp, ArrowUpDown, LayoutGrid, TableProperties, CheckSquare, Star, Flame, Ban, Mail } from "lucide-react"
-import { saveDuellyScan as dbSaveDuellyScan, saveAnalysis as dbSaveAnalysis, saveEmails as dbSaveEmails, updateBusinessStatus, type BusinessStatus } from "@/lib/db"
+import { Loader2, TrendingUp, ArrowUpDown, LayoutGrid, TableProperties, CheckSquare, Star, Flame, Ban, Mail, Zap } from "lucide-react"
+import { saveDuellyScan as dbSaveDuellyScan, saveAnalysis as dbSaveAnalysis, saveEmails as dbSaveEmails, updateBusinessStatus, deductCredits, refundCredits, getCredits, type BusinessStatus } from "@/lib/db"
 
 interface BusinessGridProps {
   businesses: CardBusiness[]
@@ -32,6 +32,8 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [selectMode, setSelectMode] = useState(false)
+  const [creditBalance, setCreditBalance] = useState<number | null>(null)
+  const [insufficientCredits, setInsufficientCredits] = useState(false)
 
   const withWebsites = useMemo(() => businesses.filter((b) => (b.webPresence === "website" || b.hasWebsite) && b.website), [businesses])
 
@@ -58,17 +60,21 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
     })
   }
 
-  const handleScanAllClick = () => {
+  const handleScanAllClick = async () => {
     const needsScan = getScanCandidates()
     const noSite = businesses.filter((b) => b.webPresence !== "website" && !b.hasWebsite)
     setScanAllCount(needsScan.length)
     setNoWebsiteCount(noSite.length)
     setScanTarget("all")
+    setInsufficientCredits(false)
     if (needsScan.length === 0) return
+    const balance = await getCredits()
+    setCreditBalance(balance)
+    if (balance < needsScan.length) setInsufficientCredits(true)
     setShowScanConfirm(true)
   }
 
-  const handleScanSelectedClick = () => {
+  const handleScanSelectedClick = async () => {
     const needsScan = getScanCandidates(selectedIds)
     const noSite = Array.from(selectedIds).filter((id) => {
       const b = businesses.find((biz) => biz.id === id)
@@ -77,7 +83,11 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
     setScanAllCount(needsScan.length)
     setNoWebsiteCount(noSite.length)
     setScanTarget("selected")
+    setInsufficientCredits(false)
     if (needsScan.length === 0) return
+    const balance = await getCredits()
+    setCreditBalance(balance)
+    if (balance < needsScan.length) setInsufficientCredits(true)
     setShowScanConfirm(true)
   }
 
@@ -98,30 +108,76 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
 
       await Promise.allSettled(
         batch.map(async (b) => {
+          // Deduct 1 credit before scanning
+          const { success } = await deductCredits(1, "scan", b.id, b.name)
+          if (!success) {
+            onBusinessUpdate?.(b.id, { scanError: "Insufficient credits" })
+            failed++
+            completed++
+            setScanProgress({ done: completed, total: toScan.length })
+            setScanningIds((prev) => { const next = new Set(prev); next.delete(b.id); return next })
+            return
+          }
+
+          let scanSucceeded = false
           try {
-            const [scanRes, analyzeRes] = await Promise.allSettled([
+            const [scanRes, analyzeRes, emailRes, gbpRes] = await Promise.allSettled([
               fetch("/api/duelly-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: b.website }) }),
               fetch("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: b.website }) }),
+              (!b.emails || b.emails.length === 0)
+                ? fetch("/api/find-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessName: b.name, address: b.address }) })
+                : Promise.resolve(null),
+              fetch("/api/gbp-audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessName: b.name, address: b.address }) }),
             ])
+
+            // SEO & AI scan
             if (scanRes.status === "fulfilled" && scanRes.value.ok) {
               const scanData = await scanRes.value.json()
               results.push({ seoScore: scanData.seoScore, geoScore: scanData.geoScore })
               dbSaveDuellyScan(b.id, scanData)
               onBusinessUpdate?.(b.id, { duellyScan: scanData })
+              scanSucceeded = true
             } else {
               const errMsg = scanRes.status === "fulfilled" ? (await scanRes.value.json().catch(() => ({}))).error || "Scan failed" : "Network error"
               onBusinessUpdate?.(b.id, { scanError: errMsg })
-              failed++
             }
+
+            // Website analysis
             if (analyzeRes.status === "fulfilled" && analyzeRes.value.ok) {
               const analyzeData = await analyzeRes.value.json()
               dbSaveAnalysis(b.id, analyzeData)
               onBusinessUpdate?.(b.id, { analysis: analyzeData })
               if (analyzeData.emails?.length) dbSaveEmails(b.id, analyzeData.emails, b.emails || [])
+              scanSucceeded = true
+            }
+
+            // Email discovery (free, no credit impact)
+            if (emailRes.status === "fulfilled" && emailRes.value && emailRes.value.ok) {
+              const emailData = await emailRes.value.json()
+              if (emailData.emails?.length) {
+                const merged = await dbSaveEmails(b.id, emailData.emails, b.emails || [])
+                onBusinessUpdate?.(b.id, { emails: merged })
+              }
+            }
+
+            // GBP audit
+            if (gbpRes.status === "fulfilled" && gbpRes.value.ok) {
+              const gbpData = await gbpRes.value.json()
+              const { saveGBPAudit } = await import("@/lib/db")
+              saveGBPAudit(b.id, gbpData)
+              onBusinessUpdate?.(b.id, { gbpAudit: gbpData })
+              scanSucceeded = true
+            }
+
+            // If nothing succeeded at all, refund the credit
+            if (!scanSucceeded) {
+              await refundCredits(1, "refund", b.id, b.name)
+              failed++
             }
           } catch {
+            await refundCredits(1, "refund", b.id, b.name)
             failed++
-            onBusinessUpdate?.(b.id, { scanError: "Unexpected error" })
+            onBusinessUpdate?.(b.id, { scanError: "Unexpected error — credit refunded" })
           }
           completed++
           setScanProgress({ done: completed, total: toScan.length })
@@ -230,7 +286,7 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
             {scanningAll && scanTarget === "all" ? (
               <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Auditing {scanProgress.done}/{scanProgress.total}</>
             ) : (
-              <><TrendingUp className="w-3.5 h-3.5" /> SEO Audit All</>
+              <><TrendingUp className="w-3.5 h-3.5" /> Full Audit All</>
             )}
           </Button>
 
@@ -258,7 +314,7 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
                 {scanningAll && scanTarget === "selected" ? (
                   <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Auditing {scanProgress.done}/{scanProgress.total}</>
                 ) : (
-                  <><TrendingUp className="w-3.5 h-3.5" /> SEO Audit Selected ({selectedWithWebsite})</>
+                  <><TrendingUp className="w-3.5 h-3.5" /> Full Audit Selected ({selectedWithWebsite})</>
                 )}
               </Button>
 
@@ -344,21 +400,35 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
       {showScanConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowScanConfirm(false)}>
           <div className="bg-card border border-border rounded-lg p-6 max-w-sm mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Audit {scanAllCount} websites?</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Full Audit {scanAllCount} businesses?</h3>
             <p className="text-sm text-muted-foreground mb-1">
-              This will run SEO & AI scoring, website analysis, and email discovery on {scanAllCount} websites.
+              This will run SEO & AI scan, website analysis, email discovery, and Google Business audit on {scanAllCount} businesses.
             </p>
             {noWebsiteCount > 0 && (
               <p className="text-sm text-muted-foreground mb-1">
                 {noWebsiteCount} {scanTarget === "selected" ? "selected " : ""}businesses don't have websites and can't be scanned.
               </p>
             )}
-            <p className="text-sm text-muted-foreground mb-4">
-              This will use <span className="font-medium text-foreground">{scanAllCount} credits</span>. Sites scanned in the last 30 days will be skipped.
+            <div className="flex items-center gap-2 my-3 p-2.5 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+              <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div className="text-sm">
+                <span className="font-medium text-foreground">{scanAllCount} credits</span>
+                <span className="text-muted-foreground"> · Balance: {creditBalance ?? "..."} credits</span>
+              </div>
+            </div>
+            {insufficientCredits && (
+              <p className="text-sm text-destructive mb-2">
+                Not enough credits. You need {scanAllCount} but only have {creditBalance}.
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mb-4">
+              Sites scanned in the last 30 days will be skipped. Failed scans are refunded.
             </p>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" size="sm" onClick={() => setShowScanConfirm(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleScanConfirm} style={{ backgroundColor: "#00A6BF" }}>Audit {scanAllCount} Sites</Button>
+              <Button size="sm" onClick={handleScanConfirm} disabled={insufficientCredits} style={!insufficientCredits ? { backgroundColor: "#00A6BF" } : {}}>
+                Audit {scanAllCount} Businesses
+              </Button>
             </div>
           </div>
         </div>

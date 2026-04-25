@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name TEXT,
   organization_id UUID REFERENCES organizations(id),
   role TEXT DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member')),
+  credits INTEGER DEFAULT 10,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

@@ -6,6 +6,7 @@ import { ProjectPicker } from "./project-picker"
 import { Button } from "@/components/ui/button"
 import { Zap, Database, Star, Ban, Flame, SearchCheck, Menu, X, Search, LayoutDashboard, ClipboardList, LogOut, Settings, User } from "lucide-react"
 import Link from "next/link"
+import { useCredits } from "@/hooks/use-credits"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +30,7 @@ const NAV_LINKS = [
 
 export function DashboardHeader() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { credits } = useCredits()
 
   const router = useRouter()
 
@@ -60,6 +62,12 @@ export function DashboardHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-2">
+          {credits !== null && (
+            <div className="flex items-center gap-1 text-sm font-medium px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+              <Zap className="w-3.5 h-3.5" />
+              {credits}
+            </div>
+          )}
           <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

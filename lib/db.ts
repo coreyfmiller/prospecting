@@ -522,3 +522,114 @@ export async function deletePipelineStage(id: string): Promise<void> {
   const supabase = getSupabase()
   await supabase.from("custom_pipeline_stages").delete().eq("id", id)
 }
+
+// --- Credits ---
+
+export interface CreditTransaction {
+  id: string
+  user_id: string
+  amount: number
+  reason: string
+  business_id?: string
+  business_name?: string
+  created_at: string
+}
+
+export async function getCredits(): Promise<number> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+  const { data } = await supabase
+    .from("profiles")
+    .select("credits")
+    .eq("id", user.id)
+    .single()
+  return data?.credits ?? 0
+}
+
+export async function deductCredits(
+  amount: number,
+  reason: string,
+  businessId?: string,
+  businessName?: string
+): Promise<{ success: boolean; remaining: number }> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, remaining: 0 }
+
+  // Get current balance
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("credits")
+    .eq("id", user.id)
+    .single()
+
+  const current = profile?.credits ?? 0
+  if (current < amount) return { success: false, remaining: current }
+
+  const newBalance = current - amount
+
+  // Deduct
+  await supabase
+    .from("profiles")
+    .update({ credits: newBalance })
+    .eq("id", user.id)
+
+  // Log transaction
+  await supabase.from("credit_transactions").insert({
+    user_id: user.id,
+    amount: -amount,
+    reason,
+    business_id: businessId || null,
+    business_name: businessName || null,
+  })
+
+  return { success: true, remaining: newBalance }
+}
+
+export async function refundCredits(
+  amount: number,
+  reason: string,
+  businessId?: string,
+  businessName?: string
+): Promise<number> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("credits")
+    .eq("id", user.id)
+    .single()
+
+  const newBalance = (profile?.credits ?? 0) + amount
+
+  await supabase
+    .from("profiles")
+    .update({ credits: newBalance })
+    .eq("id", user.id)
+
+  await supabase.from("credit_transactions").insert({
+    user_id: user.id,
+    amount,
+    reason,
+    business_id: businessId || null,
+    business_name: businessName || null,
+  })
+
+  return newBalance
+}
+
+export async function getCreditHistory(limit = 50): Promise<CreditTransaction[]> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data } = await supabase
+    .from("credit_transactions")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(limit)
+  return data || []
+}
