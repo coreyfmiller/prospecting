@@ -67,7 +67,7 @@ export function BusinessTable({ businesses, selectedIds, onToggleSelect, onToggl
               <TableHead>Presence</TableHead>
               <TableHead className="text-center">SEO</TableHead>
               <TableHead className="text-center">GEO</TableHead>
-              <TableHead className="text-center">DA</TableHead>
+              <TableHead className="text-center">Domain Authority</TableHead>
               <TableHead className="text-center">GBP</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Issues</TableHead>
@@ -131,7 +131,7 @@ export function BusinessTable({ businesses, selectedIds, onToggleSelect, onToggl
                     {b.duellyScan ? <ScoreBadge value={b.duellyScan.geoScore} label="GEO" /> : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell className="text-center">
-                    {b.duellyScan ? <ScoreBadge value={b.duellyScan.domainAuthority} label="DA" /> : <span className="text-xs text-muted-foreground">—</span>}
+                    {b.duellyScan ? <ScoreBadge value={b.duellyScan.domainAuthority} label="Domain Authority" /> : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell className="text-center">
                     {b.gbpAudit ? <ScoreBadge value={b.gbpAudit.completenessScore} label="GBP" /> : <span className="text-xs text-muted-foreground">—</span>}

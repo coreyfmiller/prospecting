@@ -264,7 +264,17 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
     else if (sortBy === "seo-best") list.sort((a, b) => (b.duellyScan?.seoScore ?? -1) - (a.duellyScan?.seoScore ?? -1))
     else if (sortBy === "geo-worst") list.sort((a, b) => (a.duellyScan?.geoScore ?? 999) - (b.duellyScan?.geoScore ?? 999))
     else if (sortBy === "geo-best") list.sort((a, b) => (b.duellyScan?.geoScore ?? -1) - (a.duellyScan?.geoScore ?? -1))
-    else list.sort((a, b) => (presenceOrder[getPresence(a)] ?? 3) - (presenceOrder[getPresence(b)] ?? 3))
+    else if (sortBy === "rating") list.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || a.name.localeCompare(b.name))
+    else if (sortBy === "name") list.sort((a, b) => a.name.localeCompare(b.name))
+    else {
+      // Default: group by presence, then sort by rating within each group
+      list.sort((a, b) => {
+        const pa = presenceOrder[getPresence(a)] ?? 3
+        const pb = presenceOrder[getPresence(b)] ?? 3
+        if (pa !== pb) return pa - pb
+        return (b.rating ?? 0) - (a.rating ?? 0)
+      })
+    }
     return list
   }, [businesses, sortBy])
 
@@ -333,6 +343,8 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="default">Web Presence</SelectItem>
+                <SelectItem value="rating">Highest Rating</SelectItem>
+                <SelectItem value="name">Name A-Z</SelectItem>
                 <SelectItem value="seo-worst">SEO: Worst First</SelectItem>
                 <SelectItem value="seo-best">SEO: Best First</SelectItem>
                 <SelectItem value="geo-worst">AI Visibility: Worst</SelectItem>
@@ -423,7 +435,7 @@ export function BusinessGrid({ businesses, onBusinessUpdate, onProspectChange, o
       {/* Content */}
       {viewMode === "cards" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {sorted.map((business) => (
+          {sorted.filter((b) => b.status !== "dismissed").map((business) => (
             <div key={business.id} className="relative">
               <div className="absolute top-3 right-3 z-10">
                 <Checkbox

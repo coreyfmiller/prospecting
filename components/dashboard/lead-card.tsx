@@ -270,16 +270,18 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
   }
 
   const confirmDismiss = async () => {
-    setStatus("dismissed"); setShowDismissConfirm(false); setHidden(true)
+    setStatus("dismissed"); setShowDismissConfirm(false)
     await updateBusinessStatus(business.id, "dismissed")
     onProspectChange?.()
   }
 
   if (hidden) return null
 
+  // If dismissed and parent is filtering dismissed, hide immediately
+  if (isDismissed) return null
+
   const cardBg = isPriority ? "bg-amber-50 dark:bg-amber-900/40 ring-1 ring-amber-400 dark:ring-amber-500"
     : isProspect ? "bg-green-50 dark:bg-green-900/40 ring-1 ring-green-300 dark:ring-green-500"
-    : isDismissed ? "bg-red-50 dark:bg-red-900/30 ring-1 ring-red-300 dark:ring-red-500 opacity-75"
     : "bg-card"
 
   return (
@@ -474,7 +476,7 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
             <div className="grid grid-cols-3 gap-2">
               <ScoreGauge value={duellyScan.seoScore} label="SEO" />
               <ScoreGauge value={duellyScan.geoScore} label="AI Visibility" sublabel="(GEO)" />
-              <ScoreGauge value={duellyScan.domainAuthority} label="DA" />
+              <ScoreGauge value={duellyScan.domainAuthority} label="Domain Authority" />
             </div>
             {duellyScan.criticalIssues?.length > 0 && (
               <div className="text-xs text-muted-foreground">
