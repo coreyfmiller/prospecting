@@ -8,10 +8,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#03556e] flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-lg text-[#03556e]">MarketMojo.ai</span>
+            <img src="/logo.png" alt="MarketMojo.ai" className="h-8" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm">
             <a href="#features" className="text-slate-600 hover:text-[#03556e] transition-colors">Features</a>
@@ -385,10 +382,7 @@ export default function LandingPage() {
       <footer className="py-12 px-6 border-t border-slate-100">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-[#03556e] flex items-center justify-center">
-              <Zap className="w-3 h-3 text-white" />
-            </div>
-            <span className="font-bold text-sm text-[#03556e]">MarketMojo.ai</span>
+            <img src="/logo.png" alt="MarketMojo.ai" className="h-6" />
           </div>
           <p className="text-sm text-slate-500">
             Local Intelligence. Real Results.
