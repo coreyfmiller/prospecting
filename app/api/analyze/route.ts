@@ -71,21 +71,61 @@ const OUTDATED_SIGNALS: Record<string, RegExp> = {
 }
 
 export async function POST(req: NextRequest) {
+  let url: string | undefined
   try {
-    const { url } = await req.json()
+    const body = await req.json()
+    url = body.url
     if (!url) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 })
     }
 
     const analysis = await analyzeSite(url)
     return NextResponse.json(analysis)
-  } catch (error) {
+  } catch (error: any) {
     console.error("Analysis error:", error)
+    const reason = classifyAnalysisError(error, url)
     return NextResponse.json(
-      { error: "Failed to analyze site" },
+      { error: reason.userMessage, reason: reason.category, suggestion: reason.suggestion },
       { status: 500 }
     )
   }
+}
+
+function classifyAnalysisError(error: any, url?: string): { userMessage: string; category: string; suggestion: string } {
+  const msg = error?.message || String(error)
+
+  if (msg.includes("ERR_NAME_NOT_RESOLVED") || msg.includes("ENOTFOUND") || msg.includes("getaddrinfo")) {
+    return { userMessage: "This domain doesn't exist or can't be reached.", category: "dns", suggestion: "Double-check the URL is correct." }
+  }
+  if (msg.includes("ERR_CONNECTION_REFUSED") || msg.includes("ECONNREFUSED")) {
+    return { userMessage: "The website refused the connection — it may be offline.", category: "offline", suggestion: "Verify the site is actually online by visiting it in your browser." }
+  }
+  if (msg.includes("ERR_SSL") || msg.includes("CERT_") || msg.includes("certificate")) {
+    return { userMessage: "This site has SSL certificate problems preventing analysis.", category: "ssl", suggestion: "The site's security certificate is invalid or expired." }
+  }
+  if (msg.includes("ERR_TOO_MANY_REDIRECTS") || msg.includes("redirect")) {
+    return { userMessage: "This site has a redirect loop — it keeps bouncing between URLs.", category: "redirect", suggestion: "The site has a configuration issue. Try the direct URL." }
+  }
+  if (msg.includes("timeout") || msg.includes("Timeout") || msg.includes("AbortError") || msg.includes("ERR_TIMED_OUT")) {
+    return { userMessage: "This site took too long to respond (timed out after 10s).", category: "timeout", suggestion: "The site may be overloaded. Try again in a few minutes." }
+  }
+  if (msg.includes("bot protection") || msg.includes("Just a moment") || msg.includes("challenge-platform") || msg.includes("Cloudflare") || msg.includes("403")) {
+    return { userMessage: "This site has bot protection that blocks automated analysis.", category: "bot-protection", suggestion: "Enterprise-level protection (Cloudflare, etc.) prevents our crawler from accessing the page." }
+  }
+  if (msg.includes("404") || msg.includes("Not Found")) {
+    return { userMessage: "This page doesn't exist (404).", category: "not-found", suggestion: "The URL may have changed. Check if the business has a different website." }
+  }
+  if (msg.includes("500") || msg.includes("502") || msg.includes("503")) {
+    return { userMessage: "The website's server is having issues right now.", category: "server-error", suggestion: "This is a problem on their end. Try again later." }
+  }
+  if (msg.includes("ERR_HTTP2_PROTOCOL_ERROR")) {
+    return { userMessage: "This site has advanced security that blocks automated tools.", category: "bot-protection", suggestion: "Enterprise-grade protection prevents analysis." }
+  }
+  if (msg.includes("fetch failed") || msg.includes("ECONNRESET") || msg.includes("socket")) {
+    return { userMessage: "Connection dropped while loading the site.", category: "network", suggestion: "The site may be unstable. Try again." }
+  }
+
+  return { userMessage: "Unable to analyze this website.", category: "unknown", suggestion: "An unexpected error occurred. Try a different URL or try again later." }
 }
 
 async function analyzeSite(url: string): Promise<SiteAnalysis> {
@@ -194,13 +234,22 @@ async function analyzeSite(url: string): Promise<SiteAnalysis> {
       }
 
     } catch (err: any) {
-      flags.push(err.name === "AbortError" ? "Site took too long to respond" : "Could not reach site")
+      const reason = err.name === "AbortError"
+        ? "Site took too long to respond (timed out after 10 seconds). It may be overloaded or very slow."
+        : err.code === "ENOTFOUND" || err.message?.includes("ENOTFOUND")
+        ? "Domain not found — this URL may be incorrect or the site no longer exists."
+        : err.code === "ECONNREFUSED" || err.message?.includes("ECONNREFUSED")
+        ? "Connection refused — the server is not accepting connections."
+        : err.message?.includes("ECONNRESET")
+        ? "Connection was reset — the server dropped the connection unexpectedly."
+        : `Could not reach this website (${err.code || err.message || "network error"}).`
+      flags.push(reason)
       return { 
         isYellowPages: false, 
         hasSSL, 
         technologies, 
         flags, 
-        summary: "Could not reach this website to analyze it.", 
+        summary: reason, 
         emails: [],
         isMobileFriendly: true
       }

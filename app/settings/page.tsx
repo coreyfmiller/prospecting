@@ -149,20 +149,24 @@ export default function SettingsPage() {
 
           {/* Branding */}
           <Card>
-            <CardHeader><CardTitle className="text-sm font-medium">Company Branding</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Report Branding</CardTitle>
+              <p className="text-xs text-muted-foreground">Customize how your PDF audit reports look. Your company name and logo appear on every report you generate — your clients will see your brand, not ours.</p>
+            </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-foreground block mb-2">Company Name</label>
+                <label className="text-sm font-medium text-foreground block mb-1">Company / Agency Name</label>
+                <p className="text-xs text-muted-foreground mb-2">Displayed in the report header and cover page. Leave blank to show "MarketMojo.ai".</p>
                 <div className="flex gap-2">
-                  <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Your Agency Name" />
+                  <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g. Acme Digital, Smith Web Design" />
                   <Button onClick={handleSave} disabled={saving} size="sm">
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
                   </Button>
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground block mb-2">Report Logo</label>
-                <p className="text-xs text-muted-foreground mb-3">This logo appears on PDF audit reports. PNG or JPG, max 500KB.</p>
+                <label className="text-sm font-medium text-foreground block mb-1">Report Logo</label>
+                <p className="text-xs text-muted-foreground mb-3">Replaces the text name on the cover page. PNG or JPG, max 500KB. If no logo is uploaded, your company name is shown instead.</p>
                 {logo ? (
                   <div className="space-y-3">
                     <div className="p-4 bg-white rounded-lg border border-border inline-block">

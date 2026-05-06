@@ -21,5 +21,5 @@ export function getCrawlerErrorMessage(error: any): CrawlerError {
   if (msg.includes('503')) return { userMessage: 'Site temporarily unavailable.', technicalMessage: 'HTTP 503', suggestion: 'Try again later.', category: 'server' };
   if (msg.includes('Cloudflare')) return { userMessage: 'Cloudflare is blocking our crawler.', technicalMessage: 'Cloudflare protection', suggestion: 'Try a smaller site.', category: 'bot-protection' };
 
-  return { userMessage: 'Unable to analyze this website.', technicalMessage: msg, suggestion: 'Try a different URL.', category: 'unknown' };
+  return { userMessage: `Unable to analyze this website (${msg.slice(0, 80)}).`, technicalMessage: msg, suggestion: 'Try a different URL or try again later.', category: 'unknown' };
 }

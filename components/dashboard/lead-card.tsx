@@ -188,15 +188,20 @@ export function LeadCard({ business, onProspectChange, onBlock, customServiceTag
     if (!success) { setAnalyzeError("Insufficient credits"); setAnalyzing(false); return }
     try {
       const res = await fetch("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: business.website }) })
-      if (!res.ok) throw new Error("Analysis failed")
       const data = await res.json()
+      if (!res.ok) {
+        const errorMsg = data.suggestion
+          ? `${data.error} ${data.suggestion}`
+          : data.error || "Analysis failed"
+        throw new Error(errorMsg)
+      }
       setAnalysis(data)
       dbSaveAnalysis(business.id, data)
       if (data.emails?.length) {
         const merged = await dbSaveEmails(business.id, data.emails, emails)
         setEmails(merged)
       }
-    } catch { setAnalyzeError("Could not analyze this site"); await refundCredits(1, "refund", business.id, business.name) }
+    } catch (err: any) { setAnalyzeError(err.message || "Could not analyze this site"); await refundCredits(1, "refund", business.id, business.name) }
     setAnalyzing(false)
   }
 
