@@ -18,7 +18,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 
 const NAV_LINKS = [
-  { href: "/", label: "Search", icon: Search },
+  { href: "/search", label: "Search", icon: Search },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/audits", label: "Audits", icon: ClipboardList },
   { href: "/database", label: "All Businesses", icon: Database },
@@ -47,7 +47,7 @@ export function DashboardHeader() {
           <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => setMobileOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
-          <Link href="/" className="flex items-center gap-2 shrink-0">
+          <Link href="/search" className="flex items-center gap-2 shrink-0">
             <img src="/logo.png" alt="MarketMojo.ai" className="h-8" />
           </Link>
           <ProjectPicker />
