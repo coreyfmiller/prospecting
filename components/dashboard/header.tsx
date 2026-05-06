@@ -42,13 +42,13 @@ export function DashboardHeader() {
 
   return (
     <>
-      <header className="h-20 border-b border-border bg-card px-4 sm:px-6 flex items-center justify-between sticky top-0 z-50">
+      <header className="h-16 border-b border-border bg-card px-4 sm:px-6 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2 sm:gap-4 overflow-hidden">
           <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => setMobileOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
           <Link href="/search" className="flex items-center gap-2 shrink-0">
-            <img src="/logo.png" alt="MarketMojo.ai" className="h-16" />
+            <img src="/logo.png" alt="MarketMojo.ai" className="h-12" />
           </Link>
           <ProjectPicker />
           <nav className="hidden md:flex items-center gap-1">
@@ -97,7 +97,7 @@ export function DashboardHeader() {
           <div className="absolute left-0 top-0 bottom-0 w-72 bg-card border-r border-border p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="MarketMojo.ai" className="h-16" />
+                <img src="/logo.png" alt="MarketMojo.ai" className="h-12" />
               </div>
               <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
                 <X className="w-5 h-5" />
