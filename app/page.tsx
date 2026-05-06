@@ -57,7 +57,7 @@ export default function LandingPage() {
           <div className="relative max-w-5xl mx-auto">
             <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10 pointer-events-none" />
             <div className="rounded-xl border border-slate-200 shadow-2xl overflow-hidden">
-              <img src="/cards.png" alt="MarketMojo dashboard showing local business audit results" className="w-full" />
+              <img src="/duellysite.jpg" alt="MarketMojo dashboard showing local business audit results" className="w-full" />
             </div>
           </div>
         </div>
