@@ -47,7 +47,7 @@ function getGradeLabel(score: number, max: number = 100): string {
 const s = StyleSheet.create({
   // Page
   page: { padding: 0, fontFamily: "Helvetica", backgroundColor: BRAND.white, color: BRAND.text },
-  pageInner: { padding: 40, paddingTop: 30 },
+  pageInner: { padding: "24 36", paddingTop: 20 },
 
   // Cover page
   coverPage: { padding: 0, fontFamily: "Helvetica", backgroundColor: BRAND.primary, color: BRAND.white },
@@ -71,68 +71,64 @@ const s = StyleSheet.create({
   coverDate: { fontSize: 9, color: "rgba(255,255,255,0.5)" },
 
   // Header bar (inner pages)
-  headerBar: { backgroundColor: BRAND.primary, padding: "12 40", flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  headerTitle: { fontSize: 10, fontWeight: "bold", color: BRAND.white },
-  headerRight: { fontSize: 8, color: "rgba(255,255,255,0.7)" },
+  headerBar: { backgroundColor: BRAND.primary, padding: "10 36", flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headerTitle: { fontSize: 9, fontWeight: "bold", color: BRAND.white },
+  headerRight: { fontSize: 7, color: "rgba(255,255,255,0.7)" },
 
   // Section
-  section: { marginBottom: 20 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10, gap: 8 },
-  sectionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: BRAND.accent },
-  sectionTitle: { fontSize: 13, fontWeight: "bold", color: BRAND.primary },
+  section: { marginBottom: 14 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 6, gap: 6 },
+  sectionDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: BRAND.accent },
+  sectionTitle: { fontSize: 11, fontWeight: "bold", color: BRAND.primary },
 
   // Score cards row
-  scoreRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
-  scoreCard: { flex: 1, padding: 14, borderRadius: 8, alignItems: "center", border: `1px solid ${BRAND.border}` },
-  scoreCardValue: { fontSize: 28, fontWeight: "bold" },
-  scoreCardLabel: { fontSize: 8, color: BRAND.muted, marginTop: 4, textAlign: "center" },
-  scoreCardGrade: { fontSize: 8, marginTop: 2 },
+  scoreRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
+  scoreCard: { flex: 1, padding: 10, borderRadius: 6, alignItems: "center", border: `1px solid ${BRAND.border}` },
+  scoreCardValue: { fontSize: 22, fontWeight: "bold" },
+  scoreCardLabel: { fontSize: 7, color: BRAND.muted, marginTop: 3, textAlign: "center" },
+  scoreCardGrade: { fontSize: 7, marginTop: 1 },
 
   // Data rows
-  dataRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 7, borderBottom: `1px solid ${BRAND.border}` },
-  dataLabel: { fontSize: 9, color: BRAND.muted },
-  dataValue: { fontSize: 9, fontWeight: "bold", color: BRAND.text },
+  dataRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 5, borderBottom: `1px solid ${BRAND.border}` },
+  dataLabel: { fontSize: 8, color: BRAND.muted },
+  dataValue: { fontSize: 8, fontWeight: "bold", color: BRAND.text },
 
   // Checklist
-  checkRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 5 },
-  checkIcon: { width: 14, height: 14, borderRadius: 7, alignItems: "center", justifyContent: "center" },
-  checkLabel: { fontSize: 9, color: BRAND.text },
+  checkRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 3 },
+  checkIcon: { width: 12, height: 12, borderRadius: 6, alignItems: "center", justifyContent: "center" },
+  checkLabel: { fontSize: 8, color: BRAND.text },
 
   // Issues / Strengths / Weaknesses
-  issueBox: { backgroundColor: BRAND.redBg, borderRadius: 6, padding: 12, marginBottom: 8 },
-  issueTitle: { fontSize: 9, fontWeight: "bold", color: BRAND.red, marginBottom: 6 },
-  issueItem: { fontSize: 9, color: BRAND.text, marginBottom: 3, paddingLeft: 8 },
-  strengthBox: { backgroundColor: BRAND.greenBg, borderRadius: 6, padding: 12, marginBottom: 8 },
-  strengthTitle: { fontSize: 9, fontWeight: "bold", color: BRAND.green, marginBottom: 6 },
-  weaknessBox: { backgroundColor: BRAND.amberBg, borderRadius: 6, padding: 12, marginBottom: 8 },
-  weaknessTitle: { fontSize: 9, fontWeight: "bold", color: BRAND.amber, marginBottom: 6 },
+  issueBox: { backgroundColor: BRAND.redBg, borderRadius: 4, padding: 8, marginBottom: 6 },
+  issueTitle: { fontSize: 8, fontWeight: "bold", color: BRAND.red, marginBottom: 4 },
+  issueItem: { fontSize: 8, color: BRAND.text, marginBottom: 2, paddingLeft: 6 },
+  strengthBox: { backgroundColor: BRAND.greenBg, borderRadius: 4, padding: 8, marginBottom: 6 },
+  strengthTitle: { fontSize: 8, fontWeight: "bold", color: BRAND.green, marginBottom: 4 },
+  weaknessBox: { backgroundColor: BRAND.amberBg, borderRadius: 4, padding: 8, marginBottom: 6 },
+  weaknessTitle: { fontSize: 8, fontWeight: "bold", color: BRAND.amber, marginBottom: 4 },
 
   // Assessment detail
-  assessRow: { marginBottom: 8 },
-  assessLabel: { fontSize: 9, fontWeight: "bold", color: BRAND.primary, marginBottom: 2 },
-  assessValue: { fontSize: 9, color: BRAND.muted, lineHeight: 1.5 },
+  assessRow: { marginBottom: 6 },
+  assessLabel: { fontSize: 8, fontWeight: "bold", color: BRAND.primary, marginBottom: 1 },
+  assessValue: { fontSize: 8, color: BRAND.muted, lineHeight: 1.4 },
 
   // Recommendation card
-  recCard: { padding: 12, borderRadius: 6, backgroundColor: BRAND.light, borderLeft: `3px solid ${BRAND.accent}`, marginBottom: 8 },
-  recNumber: { fontSize: 8, fontWeight: "bold", color: BRAND.accent, marginBottom: 2 },
-  recTitle: { fontSize: 10, fontWeight: "bold", color: BRAND.text, marginBottom: 3 },
-  recDesc: { fontSize: 9, color: BRAND.muted, lineHeight: 1.5 },
+  recCard: { padding: 8, borderRadius: 4, backgroundColor: BRAND.light, borderLeft: `3px solid ${BRAND.accent}`, marginBottom: 6 },
+  recNumber: { fontSize: 7, fontWeight: "bold", color: BRAND.accent, marginBottom: 1 },
+  recTitle: { fontSize: 9, fontWeight: "bold", color: BRAND.text, marginBottom: 2 },
+  recDesc: { fontSize: 8, color: BRAND.muted, lineHeight: 1.4 },
 
   // Service pitch
-  serviceCard: { padding: 12, borderRadius: 6, backgroundColor: BRAND.accentLight, borderLeft: `3px solid ${BRAND.primary}`, marginBottom: 8 },
-  serviceTitle: { fontSize: 10, fontWeight: "bold", color: BRAND.primary, marginBottom: 3 },
-  serviceDesc: { fontSize: 9, color: BRAND.muted, lineHeight: 1.5 },
-
-  // Quote / recommendation callout
-  quoteBox: { backgroundColor: BRAND.accentLight, borderRadius: 8, padding: 16, marginTop: 12, borderLeft: `4px solid ${BRAND.accent}` },
-  quoteText: { fontSize: 10, color: BRAND.primary, fontStyle: "italic", lineHeight: 1.6 },
+  serviceCard: { padding: 8, borderRadius: 4, backgroundColor: BRAND.accentLight, borderLeft: `3px solid ${BRAND.primary}`, marginBottom: 6 },
+  serviceTitle: { fontSize: 9, fontWeight: "bold", color: BRAND.primary, marginBottom: 2 },
+  serviceDesc: { fontSize: 8, color: BRAND.muted, lineHeight: 1.4 },
 
   // Footer
-  footer: { position: "absolute", bottom: 20, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${BRAND.border}`, paddingTop: 8 },
+  footer: { position: "absolute", bottom: 16, left: 36, right: 36, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${BRAND.border}`, paddingTop: 6 },
   footerText: { fontSize: 7, color: BRAND.muted },
 
   // Two column layout
-  twoCol: { flexDirection: "row", gap: 16 },
+  twoCol: { flexDirection: "row", gap: 12 },
   col: { flex: 1 },
 
   // Metric grid
@@ -140,11 +136,6 @@ const s = StyleSheet.create({
   metricItem: { width: "48%", flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, borderBottom: `1px solid ${BRAND.border}` },
   metricLabel: { fontSize: 8, color: BRAND.muted },
   metricValue: { fontSize: 8, fontWeight: "bold", color: BRAND.text },
-
-  // CTA section
-  ctaBox: { backgroundColor: BRAND.primary, borderRadius: 8, padding: 20, alignItems: "center", marginTop: 16 },
-  ctaTitle: { fontSize: 14, fontWeight: "bold", color: BRAND.white, marginBottom: 6 },
-  ctaSubtitle: { fontSize: 10, color: "rgba(255,255,255,0.8)", textAlign: "center" },
 })
 
 // ─── Helper Components ──────────────────────────────────────────────────────
@@ -345,7 +336,7 @@ export function AuditReport({ data }: { data: any }) {
               </View>
 
               {/* Strengths & Weaknesses side by side */}
-              <View style={[s.twoCol, { marginTop: 10 }]}>
+              <View style={[s.twoCol, { marginTop: 6 }]}>
                 {aiAssessment.topStrengths?.length > 0 && (
                   <View style={[s.col, s.strengthBox]}>
                     <Text style={s.strengthTitle}>Strengths</Text>
@@ -395,7 +386,7 @@ export function AuditReport({ data }: { data: any }) {
 
               {/* SEO Checks */}
               {(analysis.hasCanonical != null || analysis.hasOgTags != null || analysis.hasTwitterCard != null) && (
-                <View style={[s.twoCol, { marginTop: 10 }]}>
+                <View style={[s.twoCol, { marginTop: 6 }]}>
                   <View style={s.col}>
                     {analysis.hasCanonical != null && <CheckItem passed={analysis.hasCanonical} label="Canonical URL" />}
                     {analysis.hasOgTags != null && <CheckItem passed={analysis.hasOgTags} label="Open Graph Tags" />}
@@ -409,7 +400,7 @@ export function AuditReport({ data }: { data: any }) {
 
               {/* Critical Issues from Duelly Scan */}
               {duellyScan?.criticalIssues?.length > 0 && (
-                <View style={[s.issueBox, { marginTop: 12 }]}>
+                <View style={[s.issueBox, { marginTop: 8 }]}>
                   <Text style={s.issueTitle}>Critical Issues Detected</Text>
                   {duellyScan.criticalIssues.map((issue: string, i: number) => (
                     <Text key={i} style={s.issueItem}>• {issue}</Text>
@@ -419,7 +410,7 @@ export function AuditReport({ data }: { data: any }) {
 
               {/* Flags from analysis */}
               {analysis.flags?.length > 0 && !duellyScan?.criticalIssues?.length && (
-                <View style={[s.issueBox, { marginTop: 12 }]}>
+                <View style={[s.issueBox, { marginTop: 8 }]}>
                   <Text style={s.issueTitle}>Issues Found</Text>
                   {analysis.flags.map((flag: string, i: number) => (
                     <Text key={i} style={s.issueItem}>• {flag}</Text>
@@ -446,7 +437,7 @@ export function AuditReport({ data }: { data: any }) {
                 </View>
               </View>
               {gbpAudit.issues?.length > 0 && (
-                <View style={[s.weaknessBox, { marginTop: 10 }]}>
+                <View style={[s.weaknessBox, { marginTop: 6 }]}>
                   <Text style={s.weaknessTitle}>GBP Recommendations</Text>
                   {gbpAudit.issues.map((issue: string, i: number) => (
                     <Text key={i} style={s.issueItem}>• {issue}</Text>
@@ -510,14 +501,6 @@ export function AuditReport({ data }: { data: any }) {
                 ))}
               </View>
             )}
-
-            {/* CTA */}
-            <View style={s.ctaBox}>
-              <Text style={s.ctaTitle}>Ready to Improve Your Online Presence?</Text>
-              <Text style={s.ctaSubtitle}>
-                Contact {brandName} to discuss how we can help {business.name} attract more customers online.
-              </Text>
-            </View>
 
           </View>
           <PageFooter companyName={brandName} pageNum={3} />
