@@ -257,7 +257,7 @@ export default function LandingPage() {
               <h3 className="font-bold text-lg text-slate-900 mb-1">Starter</h3>
               <p className="text-sm text-slate-500 mb-4">For freelancers getting started</p>
               <div className="mb-6">
-                <span className="text-4xl font-bold text-slate-900">$36</span>
+                <span className="text-4xl font-bold text-slate-900">$30</span>
                 <span className="text-slate-500">/mo</span>
               </div>
               <ul className="space-y-3 mb-8">
@@ -270,7 +270,7 @@ export default function LandingPage() {
               <Link href="/login" className="block w-full text-center py-3 rounded-lg border border-slate-200 font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                 Get Started
               </Link>
-              <p className="text-xs text-slate-500 text-center mt-3">$1.20 per scan</p>
+              <p className="text-xs text-slate-500 text-center mt-3">$1.00 per scan</p>
             </div>
 
             {/* Pro */}
@@ -281,7 +281,7 @@ export default function LandingPage() {
               <h3 className="font-bold text-lg text-slate-900 mb-1">Pro</h3>
               <p className="text-sm text-slate-500 mb-4">For active prospectors</p>
               <div className="mb-6">
-                <span className="text-4xl font-bold text-slate-900">$110</span>
+                <span className="text-4xl font-bold text-slate-900">$95</span>
                 <span className="text-slate-500">/mo</span>
               </div>
               <ul className="space-y-3 mb-8">
@@ -296,7 +296,7 @@ export default function LandingPage() {
               <Link href="/login" className="block w-full text-center py-3 rounded-lg bg-[#03556e] text-white font-medium hover:bg-[#03556e]/90 transition-colors">
                 Get Started
               </Link>
-              <p className="text-xs text-slate-500 text-center mt-3">$1.10 per scan</p>
+              <p className="text-xs text-slate-500 text-center mt-3">$0.95 per scan</p>
             </div>
 
             {/* Agency */}
@@ -304,7 +304,7 @@ export default function LandingPage() {
               <h3 className="font-bold text-lg text-slate-900 mb-1">Agency</h3>
               <p className="text-sm text-slate-500 mb-4">For teams doing volume</p>
               <div className="mb-6">
-                <span className="text-4xl font-bold text-slate-900">$250</span>
+                <span className="text-4xl font-bold text-slate-900">$225</span>
                 <span className="text-slate-500">/mo</span>
               </div>
               <ul className="space-y-3 mb-8">
@@ -317,7 +317,7 @@ export default function LandingPage() {
               <Link href="/login" className="block w-full text-center py-3 rounded-lg border border-slate-200 font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                 Get Started
               </Link>
-              <p className="text-xs text-slate-500 text-center mt-3">$1.00 per scan</p>
+              <p className="text-xs text-slate-500 text-center mt-3">$0.90 per scan</p>
             </div>
           </div>
         </div>
