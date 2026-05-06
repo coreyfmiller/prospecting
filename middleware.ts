@@ -31,15 +31,15 @@ export async function middleware(request: NextRequest) {
     || request.nextUrl.pathname.startsWith("/login") 
     || request.nextUrl.pathname.startsWith("/auth")
 
+  // Handle OAuth code on any route — redirect to callback to exchange it
+  if (request.nextUrl.searchParams.has("code") && !request.nextUrl.pathname.startsWith("/auth")) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/auth/callback"
+    return NextResponse.redirect(url)
+  }
+
   // If not logged in and not on a public route, redirect to login
   if (!user && !isPublicRoute) {
-    // Allow through if there's an auth code in the URL (Supabase OAuth redirect)
-    if (request.nextUrl.searchParams.has("code")) {
-      // Redirect to the auth callback to exchange the code
-      const url = request.nextUrl.clone()
-      url.pathname = "/auth/callback"
-      return NextResponse.redirect(url)
-    }
     const url = request.nextUrl.clone()
     url.pathname = "/login"
     return NextResponse.redirect(url)
