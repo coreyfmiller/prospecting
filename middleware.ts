@@ -28,6 +28,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const isPublicRoute = request.nextUrl.pathname === "/" 
+    || request.nextUrl.pathname === "/ads"
     || request.nextUrl.pathname.startsWith("/login") 
     || request.nextUrl.pathname.startsWith("/auth")
 
