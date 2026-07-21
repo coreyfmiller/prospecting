@@ -45,6 +45,10 @@ function classifyPresence(website?: string, facebook?: string): WebPresence {
 
 export async function POST(req: NextRequest) {
   try {
+    const { getAuthUser, unauthorized } = await import("@/lib/api-auth")
+    const user = await getAuthUser()
+    if (!user) return unauthorized()
+
     const { query, location, category, radius } = await req.json()
 
     if (!query && !location) {

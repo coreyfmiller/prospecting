@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 
 export async function POST(req: NextRequest) {
   try {
+    const { getAuthUser, unauthorized } = await import("@/lib/api-auth")
+    const user = await getAuthUser()
+    if (!user) return unauthorized()
+
     const { business, pitchType, companyName } = await req.json()
     if (!business) {
       return NextResponse.json({ error: "Business data required" }, { status: 400 })

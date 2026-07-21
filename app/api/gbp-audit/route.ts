@@ -16,10 +16,18 @@ export interface GBPAudit {
 
 export async function POST(req: NextRequest) {
   try {
+    const { getAuthUser, requireCredits, unauthorized, insufficientCredits } = await import("@/lib/api-auth")
+    const user = await getAuthUser()
+    if (!user) return unauthorized()
+
     const { businessName, address } = await req.json()
     if (!businessName) {
       return NextResponse.json({ error: "Business name required" }, { status: 400 })
     }
+
+    // Deduct 1 credit
+    const creditCheck = await requireCredits(user.id, 1, "gbp_audit", businessName)
+    if (!creditCheck.success) return insufficientCredits(creditCheck.remaining)
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY
     if (!apiKey) {

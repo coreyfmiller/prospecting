@@ -73,14 +73,23 @@ const OUTDATED_SIGNALS: Record<string, RegExp> = {
 export async function POST(req: NextRequest) {
   let url: string | undefined
   try {
+    // Auth check
+    const { getAuthUser, requireCredits, unauthorized, insufficientCredits, refundCreditsServer } = await import("@/lib/api-auth")
+    const user = await getAuthUser()
+    if (!user) return unauthorized()
+
     const body = await req.json()
     url = body.url
     if (!url) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 })
     }
 
+    // Deduct 1 credit
+    const creditCheck = await requireCredits(user.id, 1, "site_analysis", url)
+    if (!creditCheck.success) return insufficientCredits(creditCheck.remaining)
+
     const analysis = await analyzeSite(url)
-    return NextResponse.json(analysis)
+    return NextResponse.json({ ...analysis, creditsRemaining: creditCheck.remaining })
   } catch (error: any) {
     console.error("Analysis error:", error)
     const reason = classifyAnalysisError(error, url)

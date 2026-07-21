@@ -32,8 +32,16 @@ export interface DuellyScanResult {
 
 export async function POST(req: NextRequest) {
   try {
+    const { getAuthUser, requireCredits, unauthorized, insufficientCredits } = await import("@/lib/api-auth")
+    const user = await getAuthUser()
+    if (!user) return unauthorized()
+
     const { url } = await req.json();
     if (!url) return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+
+    // Deduct 1 credit
+    const creditCheck = await requireCredits(user.id, 1, "duelly_scan", url)
+    if (!creditCheck.success) return insufficientCredits(creditCheck.remaining)
 
     // Rate limit disabled for testing
 

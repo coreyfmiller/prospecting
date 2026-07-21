@@ -41,6 +41,7 @@
     "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.3",
+    "stripe": "^20.4.1",
     "@vercel/analytics": "1.6.1",
     "autoprefixer": "^10.4.20",
     "cheerio": "^1.2.0",

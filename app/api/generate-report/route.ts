@@ -126,10 +126,18 @@ No markdown, no backticks.` }] }],
 
 export async function POST(req: NextRequest) {
   try {
+    const { getAuthUser, requireCredits, unauthorized, insufficientCredits } = await import("@/lib/api-auth")
+    const user = await getAuthUser()
+    if (!user) return unauthorized()
+
     const data = await req.json()
     if (!data.business) {
       return NextResponse.json({ error: "Business data required" }, { status: 400 })
     }
+
+    // Deduct 1 credit
+    const creditCheck = await requireCredits(user.id, 1, "pdf_report", data.business.name)
+    if (!creditCheck.success) return insufficientCredits(creditCheck.remaining)
 
     // Generate AI recommendations and service pitches in parallel
     const [recommendations, servicePitches] = await Promise.all([

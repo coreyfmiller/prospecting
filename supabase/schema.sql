@@ -17,7 +17,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name TEXT,
   organization_id UUID REFERENCES organizations(id),
   role TEXT DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member')),
-  credits INTEGER DEFAULT 10,
+  credits INTEGER DEFAULT 5,
+  plan TEXT DEFAULT 'free',
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

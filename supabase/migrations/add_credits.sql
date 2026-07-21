@@ -1,5 +1,5 @@
 -- Add credits to profiles
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS credits INTEGER DEFAULT 10;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS credits INTEGER DEFAULT 5;
 
 -- Credit transaction log
 CREATE TABLE IF NOT EXISTS credit_transactions (
